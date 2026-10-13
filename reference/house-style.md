@@ -49,7 +49,7 @@ they disagree on safety (read-only repos, no invention), this file wins.
 | What was said, **no speech at all** (`--allow-no-speech`) | slides and handouts: say the note rests on documents only |
 | Expected topics, deferred-topic owners | syllabus / profile course map; never present them as taught |
 
-- Quote the **real file** and name it (`Lec-2/main.cpp`). Never reconstruct code that exists.
+- Quote the **real file** and name it (`Lec-2/main.c`). Never reconstruct code that exists.
 - When the instructor's repo has files newer than the transcript describes, say so ("repo moved on").
 - When your local rebuild of a snippet differs from a class screen, show both and label the platform.
 - **Class visuals are part of the class.** A board drawing or annotated slide is evidence *and* content:
@@ -101,7 +101,7 @@ Never propagate an error; never nitpick a deliberate, flagged simplification. Fo
 - **Instructor-repo drift is expected, not a correction.** The class frequently differs from the repo (files
   added or changed after class, demos typed differently). Notes follow what happened in class and cite the
   repo version where it differs, in a neutral `> **Repo note:** ...` callout: never a Class correction, never
-  a gap. Example: `Lec-2` gained `fix_pointers.cpp` after the class.
+  a gap. Example: `Lec-3` gained `extra_demo.c` after the class.
 - The index (`update_index.py`) harvests these callouts into the running corrections table. Do not keep
   a second list.
 - When the instructor flags something as a simplification ("roughly", "for now"), do not correct it.

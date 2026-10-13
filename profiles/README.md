@@ -4,26 +4,33 @@ A **profile** holds everything subject-specific; the plugin's scripts and agents
 markdown file: **YAML front matter** (machine fields, read by scripts through `notes_lib.profile`) and a
 **prose body** (read verbatim by agents). Generic rules live in `../reference/`; course facts live here.
 
-| File | Subject | State |
+| File | What |
+| --- | --- |
+| `_template.md` | the blank, annotated profile: a starting point for your own subject (loads, but points at nothing) |
+| `README.md` | this schema reference |
+
+**No course profiles ship with the plugin: every profile is user-made.** Three ways to get one:
+
+| You have | Run | Result |
 | --- | --- | --- |
-| `cpp.md` | High-Performance C++ [HFT] | complete |
-| `fmi.md` | Financial Markets and Instruments | condensed, usable |
-| `cv.md` | Computer Vision [AI/ML] | condensed, usable |
-| `devops.md` | DevOps and Cloud [SWE] | condensed, usable |
-| `_template.md` | annotated empty profile (loads, but points at nothing) | template |
+| a subject `CLAUDE.md` | `/notes:init --from-claude-md <path>` | a drafted profile |
+| a syllabus and/or resources | `/notes:init --from-syllabus <pdf>` (or just `/notes:init`) | a drafted profile, assumptions printed |
+| a profile file you wrote | `/notes:init --profile path/to/profile.md` | your file, copied |
+| nothing yet | `/notes:init --profile _template` | the blank template, to edit by hand |
 
-## Templates, not live profiles
+## The project copy is the profile
 
-The files here are **templates**. `/notes:init --profile cpp` copies one into the subject project as
-`.notes-plugin-internal/profile.md`; from then on that copy is the profile (edit it freely: add sessions as transcripts land).
-Templates carry no absolute or machine-specific paths, so they work on any OS.
+`/notes:init` copies the chosen profile into the subject project as `.notes-plugin-internal/profile.md`; from
+then on that copy is the profile (edit it freely: add sessions as transcripts land). The template carries no
+absolute or machine-specific paths, so it works on any OS.
 
 ## Lookup order
 
 1. In a project: `<project>/.notes-plugin-internal/profile.md` (the project is found by walking up from the working
    directory, or `--project DIR`).
-2. `--profile <id|path>` overrides that: an explicit file path, or an id/alias resolved against
-   `<data_dir>/profiles/` and then `<plugin>/profiles/` (used by `/notes:init` and by tests).
+2. `--profile <path>` overrides that: an explicit file path, or an id/alias resolved against
+   `<data_dir>/profiles/` (your own profiles) and then `<plugin>/profiles/` (only the template). `/notes:init`
+   itself accepts only a file path, or `_template`.
 
 Files whose name starts with `_` and `README.md` are never matched by the alias scan.
 
@@ -77,8 +84,8 @@ course map falls through to the next alternative.
 | `syllabus` | syllabus PDF (course map, assessment) |
 | `classwork` | the student's own code folder for the session (default none) |
 
-Escape glob characters in names: a file called `Syllabus - [] Term 9.pdf` needs a pattern that avoids the
-brackets (`Syllabus*Term 9.pdf`).
+Escape glob characters in names: a file called `Syllabus - [] Term 1.pdf` needs a pattern that avoids the
+brackets (`Syllabus*Term 1.pdf`).
 
 ### `sessions`
 
@@ -90,8 +97,8 @@ transcript lands.
 **`order` (optional number per row)** is the *display* position in the course: index and compendium chapter
 order, prev/next links, the "prior notes" handed to writers, and `/notes:update` processing order. `n` stays
 the stable file id (`NN-<slug>.md`). Without `order`, sessions sort by `date` when they have dates, else by
-`n`; ties go by `n`. Use it for an extra lecture that falls between two numbered ones (cpp: Fast Orderbooks
-is `n: 14, order: 12.5`).
+`n`; ties go by `n`. Use it for an extra lecture that falls between two numbered ones (for example an extra
+workshop held after session 12 and before session 13 is `n: 14, order: 12.5`).
 
 **Auto-appended sessions.** When `/notes:update` (via `plan_updates.py`) finds a lecture that is not in the
 table, it appends a row in place (comments kept, existing rows never rewritten): next free `n`, title and
@@ -175,14 +182,16 @@ text are course-wide `references`. The agents receive them as `data[]`, `exercis
 
 ## Writing or changing a profile
 
-1. In the project: `/notes:init --profile <id>` (a template) or `/notes:init --from-claude-md <path>`
-   (drafts one from a subject `CLAUDE.md`), then edit `.notes-plugin-internal/profile.md`.
-2. To start a new template here instead, copy `_template.md` and fill it in.
+1. In the project: `/notes:init --from-claude-md <path>` (drafts one from a subject `CLAUDE.md`),
+   `--from-syllabus <pdf>`, or `--profile _template` (the blank template), then edit
+   `.notes-plugin-internal/profile.md`.
+2. To keep a profile outside any project, copy `_template.md`, fill it in and pass it with `--profile <path>`.
 3. Check it loads and finds a transcript for a session you have in `resources/`:
 
 ```bash
 uv run "<plugin>/scripts/resolve_inputs.py" --project <project> --session 1 --dry-run
 ```
 
-4. Run `uv run "<plugin>/tests/selftest_profiles.py"` (loads every template, checks the body sections and
-   the tables, scaffolds a cpp test project and resolves session 2).
+4. Run `uv run "<plugin>/tests/selftest_profiles.py"` (loads the template and the synthetic fixture profiles in
+   `tests/fixtures/profiles/`, checks the body sections and the tables, scaffolds a test project and resolves
+   session 2).

@@ -27,6 +27,7 @@ from pathlib import Path
 PLUGIN = Path(__file__).resolve().parents[1]
 SCRIPTS = PLUGIN / "scripts"
 FIXQ = PLUGIN / "tests" / "fixtures" / "qa"
+FIXP = PLUGIN / "tests" / "fixtures" / "profiles"   # synthetic profiles
 WORK = PLUGIN / "test-output" / "_s1"
 # optional: a real subject project to also test against (read-only); set NOTES_TEST_CPP_ROOT to enable
 CPP_ROOT = Path(os.environ.get("NOTES_TEST_CPP_ROOT", str(WORK / "_no_subject_project")))
@@ -125,8 +126,8 @@ def assigned(sc, name):
     return f
 
 
-PR = [(2, "Pointers and References", "Pointers_and_References_-_Class_Scaler_Academy", None),
-      (3, "Pointers and References 2", "Pointers_and_References_2_-_Class_Scaler_Academy", None)]
+PR = [(2, "Memory Layout", "Memory_Layout_-_Class_Scaler_Academy", None),
+      (3, "Memory Layout 2", "Memory_Layout_2_-_Class_Scaler_Academy", None)]
 
 
 # ------------------------------------------------------------------ section 11.6 cases
@@ -144,8 +145,8 @@ def t_a_transcript_only():
 
 @test
 def t_b_recording_and_whisper_no_transcript():
-    stem = "Memory_Management_+_STL_-_Class_Scaler_Academy"
-    root = project("b", [(4, "Memory Management + STL", stem, None)],
+    stem = "Heaps_and_Allocators_-_Class_Scaler_Academy"
+    root = project("b", [(4, "Heaps and Allocators", stem, None)],
                    files={f"videos/{stem}.mp4": b"", f"{stem}.whisper.json": "{}"})
     r, inp = resolve(root, 4)
     eq(r.returncode, 0, r.stderr)
@@ -154,13 +155,13 @@ def t_b_recording_and_whisper_no_transcript():
     eq(inp["transcript"], None, "no transcript")
     eq(inp["video_action"], "run", "recording present, no frames: run (whisper reused by the pipeline)")
     # the recording alone is the only speech source -> Whisper is forced
-    root2 = project("b2", [(4, "Memory Management + STL", stem, None)], files={f"videos/{stem}.mp4": b""})
+    root2 = project("b2", [(4, "Heaps and Allocators", stem, None)], files={f"videos/{stem}.mp4": b""})
     r, inp = resolve(root2, 4)
     eq(r.returncode, 0, r.stderr)
     eq((inp["speech"]["primary"], inp["video_action"]), ("recording", "run-force-whisper"), "recording only")
     eq(resolve(root2, 4, "--video", "reuse")[1]["video_action"], "run-force-whisper", "reuse cannot help")
     # nothing at all -> exit 2, unless --allow-no-speech
-    root3 = project("b3", [(4, "Memory Management + STL", stem, None)], files={"deck.pdf": b""})
+    root3 = project("b3", [(4, "Heaps and Allocators", stem, None)], files={"deck.pdf": b""})
     r, _ = resolve(root3, 4)
     eq(r.returncode, 2, "no speech")
     ok("no speech source" in r.stderr and "--allow-no-speech" in r.stderr, r.stderr)
@@ -174,18 +175,18 @@ def t_c_renamed_transcript_and_slides():
     root = project("c", PR, files={
         "Lecture 3 - pointers part 2.txt": prose(),
         "session3_slides.pdf": b"",
-        "Pointers_and_References_-_Class_Scaler_Academy.txt": scaler("Pointers and References"),
+        "Memory_Layout_-_Class_Scaler_Academy.txt": scaler("Memory Layout"),
     })
     sc, _ = scan(root)
     eq(assigned(sc, "Lecture 3 - pointers part 2.txt")["n"], 3, "renamed transcript -> 3")
     eq(assigned(sc, "session3_slides.pdf")["n"], 3, "renamed slides -> 3")
-    eq(assigned(sc, "Pointers_and_References_-_Class_Scaler_Academy.txt")["n"], 2, "exact stem -> 2")
+    eq(assigned(sc, "Memory_Layout_-_Class_Scaler_Academy.txt")["n"], 2, "exact stem -> 2")
     r, inp = resolve(root, 3)
     eq(r.returncode, 0, r.stderr)
     ok(inp["transcript"]["path"].endswith("Lecture 3 - pointers part 2.txt"), inp["transcript"])
     eq([Path(x).name for x in inp["slides"]], ["session3_slides.pdf"], "slides")
     r, inp2 = resolve(root, 2)
-    ok(inp2["transcript"]["path"].endswith("Pointers_and_References_-_Class_Scaler_Academy.txt"), "session 2 keeps its own")
+    ok(inp2["transcript"]["path"].endswith("Memory_Layout_-_Class_Scaler_Academy.txt"), "session 2 keeps its own")
     eq(inp2["slides"], [], "no slides leak into 2")
 
 
@@ -237,15 +238,15 @@ def t_e_audio_only():
 @test
 def t_f_ambiguous_file():
     root = project("f", PR, files={
-        "Pointers_and_References_-_Class_Scaler_Academy.txt": scaler("Pointers and References"),
-        "pointers slides.pdf": b""})
+        "Memory_Layout_-_Class_Scaler_Academy.txt": scaler("Memory Layout"),
+        "layout slides.pdf": b""})
     sc, out = scan(root)
-    f = assigned(sc, "pointers slides.pdf")
+    f = assigned(sc, "layout slides.pdf")
     eq(f["scope"], "unassigned", "ambiguous stays unassigned")
     ok(len(f["candidates"]) == 2 and {c["n"] for c in f["candidates"]} == {2, 3}, f["candidates"])
-    ok("UNASSIGNED" in out and "pointers slides.pdf" in out, out)
+    ok("UNASSIGNED" in out and "layout slides.pdf" in out, out)
     r, inp = resolve(root, 2)
-    eq([Path(u["path"]).name for u in inp["unassigned"]], ["pointers slides.pdf"], "inputs.unassigned")
+    eq([Path(u["path"]).name for u in inp["unassigned"]], ["layout slides.pdf"], "inputs.unassigned")
     ok(len(inp["unassigned"][0]["candidates"]) == 2 and {"n", "score"} <= set(inp["unassigned"][0]["candidates"][0]), "candidate shape")
     ok(any("could not be assigned" in w for w in inp["warnings"]), "warned")
     eq(inp["slides"], [], "not guessed into slides")
@@ -340,20 +341,20 @@ def t_fetch_code_root_fallback():
     (repo / "README.md").write_text("readme\n", encoding="utf-8")
     (repo / "Lec-1").mkdir()
     (repo / "Lec-1" / "a.cpp").write_text("int a;\n", encoding="utf-8")
-    (repo / "Memory Management").mkdir()
-    (repo / "Memory Management" / "pool.cpp").write_text("int pool;\n", encoding="utf-8")
+    (repo / "Heaps and Allocators").mkdir()
+    (repo / "Heaps and Allocators" / "pool.cpp").write_text("int pool;\n", encoding="utf-8")
     g = lambda *x: subprocess.run([git, "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *x],  # noqa: E731
                                   check=True, capture_output=True)
     g("init", "-q")
     g("add", "-A")
     g("commit", "-q", "-m", "x")
     out = WORK / "code-fb"
-    r = run("fetch_code.py", "--repo", "o/n", "--dir", "Lec-4", "--title", "Memory Management + STL", "--out", out,
+    r = run("fetch_code.py", "--repo", "o/n", "--dir", "Lec-4", "--title", "Heaps and Allocators", "--out", out,
             "--force-clone", "--clone-url", repo.as_posix(), "--data-dir", WORK / "dd")
     eq(r.returncode, 0, r.stdout + r.stderr)
     m = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     eq((m["fallback"], m["relevance"]), ("root", "unverified"), "manifest marks")
-    eq(sorted(f["path"] for f in m["fetched"]), ["Memory Management/pool.cpp", "more_pointers.cpp"], "fetched")
+    eq(sorted(f["path"] for f in m["fetched"]), ["Heaps and Allocators/pool.cpp", "more_pointers.cpp"], "fetched")
     ok(all(f["fallback"] == "root" and f["relevance"] == "unverified" for f in m["fetched"]), "per-file marks")
     # an existing session folder is not a fallback
     r = run("fetch_code.py", "--repo", "o/n", "--dir", "Lec-1", "--out", WORK / "code-ok", "--force-clone",
@@ -400,7 +401,7 @@ def t_existing_notes_and_prior():
 @test
 def t_digest_null_transcript():
     src = (FIXQ / "digest" / "digest-good.md").read_text(encoding="utf-8")
-    line = '  transcript: "resources/Pointers_and_References_-_Class_Scaler_Academy.txt"'
+    line = '  transcript: "resources/Memory_Layout_-_Class_Scaler_Academy.txt"'
     ok(line in src, "fixture line")
     p = WORK / "digest-null.md"
     p.write_text(src.replace(line, "  transcript: null"), encoding="utf-8")
@@ -422,8 +423,13 @@ def t_lint_dead_sibling_link():
 
 
 # ------------------------------------------------------------------ the real cpp project (read-only)
-def cpp_project() -> Path:
-    prof = (PLUGIN / "profiles" / "cpp.md").read_text(encoding="utf-8")
+def cpp_project() -> Path | None:
+    """A copy of the real subject's own profile (user-made; none ships with the plugin), or None."""
+    src = next((q for q in (CPP_ROOT / ".notes-plugin-internal" / "profile.md", CPP_ROOT / ".notes" / "profile.md")
+                if q.is_file()), None)
+    if src is None:
+        return None
+    prof = src.read_text(encoding="utf-8")
     root = WORK / "real"
     rmtree(root)
     (root / ".notes-plugin-internal").mkdir(parents=True)
@@ -438,13 +444,16 @@ def t_real_cpp_resources():
         print("      (skipped: cpp subject repo not present)")
         return
     root = cpp_project()
+    if root is None:
+        print("      (skipped: the real subject has no profile.md)")
+        return
     sc, _ = scan(root)
     by = {Path(f["path"]).name: f for f in sc["files"]}
-    eq(by["Pointers_and_References_2_-_Class_Scaler_Academy.txt"]["n"], 3, "P&R 2 transcript -> 3 (not 2)")
-    eq(by["Pointers_and_References_-_Class_Scaler_Academy.txt"]["n"], 2, "P&R -> 2")
+    eq(by["Memory_Layout_2_-_Class_Scaler_Academy.txt"]["n"], 3, "P&R 2 transcript -> 3 (not 2)")
+    eq(by["Memory_Layout_-_Class_Scaler_Academy.txt"]["n"], 2, "P&R -> 2")
     syl = next(f for f in sc["files"] if f["kind"] == "syllabus")
     eq(syl["scope"], "course", "syllabus course-wide")
-    ok(any(Path(c["path"]).name.startswith("SST 2028") for c in sc["course_docs"]), "syllabus in course_docs")
+    ok(any(Path(c["path"]).name.startswith("Batch 2030") for c in sc["course_docs"]), "syllabus in course_docs")
     # nothing silently dropped: every file on disk is in the scan, or is README / dotfile / frames internals
     listed = {Path(f["path"]).as_posix() for f in sc["files"]}
     frames_dirs = [Path(f["path"]).as_posix() for f in sc["files"] if f["kind"] == "frames"]
@@ -464,8 +473,8 @@ def t_real_cpp_resources():
     r, inp = resolve(root, 2)
     eq(r.returncode, 0, r.stderr)
     eq((inp["session"]["n"], inp["session"]["title"], inp["session"]["date"], inp["session"]["duration_min"]),
-       (2, "Pointers and References", "2026-08-22", 120), "session")
-    eq(Path(inp["transcript"]["path"]).name, "Pointers_and_References_-_Class_Scaler_Academy.txt", "transcript")
+       (2, "Memory Layout", "2026-08-22", 120), "session")
+    eq(Path(inp["transcript"]["path"]).name, "Memory_Layout_-_Class_Scaler_Academy.txt", "transcript")
     eq(inp["whisper"]["source"], "resources", "whisper")
     eq((inp["frames"]["count"], inp["video_action"]), (149, "reuse"), "frames")
     eq([Path(x).name for x in inp["slides"]], ["L2.pdf"], "slides")
@@ -476,7 +485,7 @@ def t_real_cpp_resources():
 
     # session 3 is its own session; session 4 has no transcript: Whisper is primary
     r, inp3 = resolve(root, 3)
-    eq(Path(inp3["transcript"]["path"]).name, "Pointers_and_References_2_-_Class_Scaler_Academy.txt", "s3 transcript")
+    eq(Path(inp3["transcript"]["path"]).name, "Memory_Layout_2_-_Class_Scaler_Academy.txt", "s3 transcript")
     r, inp4 = resolve(root, 4)
     eq(r.returncode, 0, r.stderr)
     eq((inp4["speech"]["primary"], inp4["transcript"]), ("whisper", None), "s4 whisper primary")
@@ -485,9 +494,9 @@ def t_real_cpp_resources():
 
 @test
 def t_real_names_with_only_video_and_whisper():
-    """Memory_Management_+_STL with only videos/<stem>.mp4 + <stem>.whisper.json (zero-byte stand-ins)."""
-    stem = "Memory_Management_+_STL_-_Class_Scaler_Academy"
-    prof = (PLUGIN / "profiles" / "cpp.md").read_text(encoding="utf-8")
+    """Heaps_and_Allocators with only videos/<stem>.mp4 + <stem>.whisper.json (zero-byte stand-ins)."""
+    stem = "Templates_-_Lecture"
+    prof = (FIXP / "alpha.md").read_text(encoding="utf-8")
     root = WORK / "mm"
     rmtree(root)
     (root / ".notes-plugin-internal").mkdir(parents=True)
@@ -495,10 +504,10 @@ def t_real_names_with_only_video_and_whisper():
     (root / "resources" / "videos").mkdir(parents=True)
     (root / "resources" / "videos" / f"{stem}.mp4").write_bytes(b"")
     (root / "resources" / f"{stem}.whisper.json").write_text("{}", encoding="utf-8")
-    r, inp = resolve(root, 4)
+    r, inp = resolve(root, 3)
     eq(r.returncode, 0, r.stderr)
     eq(inp["speech"]["primary"], "whisper", "speech.primary")
-    eq(inp["session"]["title"], "Memory Management + STL", "title")
+    eq(inp["session"]["title"], "Templates", "title")
 
 
 @test

@@ -15,14 +15,14 @@ logistics. Apply the profile's ASR table silently. Tag every heard number as *he
 ```yaml
 profile: cpp                      # profile id
 session: 3                        # int
-title_syllabus: "Pointers and References 2"     # profile title
+title_syllabus: "Memory Layout 2"     # profile title
 title_as_taught: "Arrays, decay and reference parameters"   # what was actually taught
 slug: arrays-decay-and-reference-parameters     # kebab-case, from title_as_taught; both tiers use it
 date: 2026-08-24                  # ISO; profile date wins when the transcript header is ambiguous
 duration_min: 120
 sources:
-  transcript: "Pointers_and_References_2_-_Class_Scaler_Academy.txt"
-  whisper: "Pointers_and_References_2_-_Class_Scaler_Academy.whisper.json"   # or null
+  transcript: "Memory_Layout_2_-_Class_Scaler_Academy.txt"
+  whisper: "Memory_Layout_2_-_Class_Scaler_Academy.whisper.json"   # or null
   frames_total: 140
   frames_read: 138                # frames_total minus skipped (with reasons in screen notes)
   instructor_code: ["Lec-3/main.cpp"]   # [] if none
@@ -104,7 +104,7 @@ session); real digests are far longer. `check_digest.py` must accept it unchange
 ---
 profile: cpp
 session: 3
-title_syllabus: "Pointers and References 2"
+title_syllabus: "Memory Layout 2"
 title_as_taught: "Arrays, decay and reference parameters"
 slug: arrays-decay-and-reference-parameters
 date: 2026-08-24

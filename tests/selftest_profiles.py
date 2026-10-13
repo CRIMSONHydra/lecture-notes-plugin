@@ -7,14 +7,14 @@
     uv run tests/selftest_profiles.py [--fast] [-k SUBSTRING]
 
 Checks (the source course repo is read-only; work files go to <plugin>/test-output/_r2/):
-  * every template (cpp, fmi, cv, devops, _template) loads through notes_lib.profile.load_profile, and is
-    portable: no repo_root/output keys, no absolute or machine-specific paths, paths relative to resources_dir
+  * the blank template (profiles/_template.md) and the synthetic fixture profiles (tests/fixtures/profiles/)
+    load through notes_lib.profile.load_profile, and are portable: no repo_root/output keys, no absolute or
+    machine-specific paths, paths relative to resources_dir. No course profiles are shipped.
   * every profile body has the ten required H2 sections, in order
-  * cpp: scripts/init_project.py scaffolds a temp project under test-output/_r2/, the session-2 transcript and
-    L2.pdf are copied into its resources/, and resolve_inputs --dry-run finds them (skipped when the source
-    course folder is not on this machine)
-  * cpp: ASR table (>= 16 rows), 13-row session table matching the front matter, and NO session-2
-    correction facts (the hidden E2E answer key)
+  * scripts/init_project.py scaffolds a temp project under test-output/_r2/ from a fixture profile (--profile
+    <path>) and from the blank template; unknown ids give a helpful error; resolve_inputs --dry-run finds a
+    synthetic transcript and slides copied into resources/
+  * fixture alpha: ASR table, session table matching the front matter, `order` sorting
   * the eight reference docs exist, are < 400 lines, and contain no section sign
   * the examples embedded in note-format / digest-template / screen-notes-template / research-template parse,
     and the digest and screen-notes examples pass check_digest.py / check_screen_notes.py when those exist
@@ -34,15 +34,11 @@ import traceback
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parents[1]
-# optional read-only real subject projects for extra regression tests; every test that needs one skips when absent
-SUBJ_CPP = os.environ.get("NOTES_TEST_CPP_ROOT", "/nonexistent/cpp-subject")
-SUBJ_FDE = os.environ.get("NOTES_TEST_FDE_ROOT", "/nonexistent/fde-subject")
-SUBJ_CV = os.environ.get("NOTES_TEST_CV_ROOT", "/nonexistent/cv-subject")
 SCRIPTS = PLUGIN / "scripts"
 PROFILES = PLUGIN / "profiles"
 REFERENCE = PLUGIN / "reference"
 WORK = PLUGIN / "test-output" / "_r2"
-SOURCE_RESOURCES = Path(SUBJ_CPP + "/resources")   # read-only source of real inputs
+FIXTURES = PLUGIN / "tests" / "fixtures" / "profiles"   # synthetic profiles (no shipped course profiles)
 sys.path.insert(0, str(SCRIPTS))
 
 from notes_lib import platform as plat, profile as prof  # noqa: E402
@@ -53,15 +49,16 @@ import yaml  # noqa: E402
 FAST = False
 UV = shutil.which("uv") or str(Path.home() / ".local" / "bin" / ("uv.exe" if os.name == "nt" else "uv"))
 SECTION_SIGN = chr(0xA7)
-PROFILE_FILES = ["cpp", "fmi", "cv", "devops", "_template"]
-REAL_PROFILES = ["cpp", "fmi", "cv", "devops"]
+ALPHA = FIXTURES / "alpha.md"
+BETA = FIXTURES / "beta.md"
+TEMPLATE = PROFILES / "_template.md"
+PROFILE_FILES = {"alpha": ALPHA, "beta": BETA, "_template": TEMPLATE}
+SESSION_PROFILES = {"alpha": ALPHA}
 REFERENCE_DOCS = ["house-style", "tier-basic", "tier-advanced", "note-format", "figures",
                   "digest-template", "screen-notes-template", "research-template"]
 BODY_SECTIONS = ["Role", "Reader", "Course", "Source handling", "Basic tier — subject rules",
                  "Advanced tier — subject rules", "Domain conventions", "ASR corrections", "Callouts",
                  "Known context"]
-RESOLVE_CASES = [("cpp", 2), ("fmi", 1), ("cv", 2), ("devops", 1)]
-FORBIDDEN_CPP = ["RIP", "_Z3addii"]          # session-2 answer key: must never appear in the cpp profile
 RESULTS: list[tuple[str, str, str]] = []     # (name, PASS|FAIL|SKIP, detail)
 
 
@@ -139,8 +136,8 @@ def yaml_blocks(text: str) -> list[str]:
 # ------------------------------------------------------------------ profiles
 @test
 def t_profiles_load():
-    for pid in PROFILE_FILES:
-        p = prof.load_profile(str(PROFILES / f"{pid}.md"))
+    for pid, path in PROFILE_FILES.items():
+        p = prof.load_profile(str(path))
         need(p["id"], f"{pid}: id")
         need(p["paths"].get("transcripts"), f"{pid}: paths.transcripts")
         for tier in ("basic", "advanced"):
@@ -151,16 +148,21 @@ def t_profiles_load():
         need(b["minutes"][0] < b["minutes"][1], f"{pid}: basic minutes")
         need(re.fullmatch(r"[A-Z0-9]+", p["prefix"]), f"{pid}: prefix")
         need(p["spelling"] in ("en-GB", "en-US", "any"), f"{pid}: spelling")
-    # lookup by id and by alias works from the plugin's own profile dir
-    eq(prof.load_profile("cpp")["id"], "cpp", "id lookup")
-    eq(prof.load_profile("hft-cpp")["id"], "cpp", "alias lookup")
-    eq(prof.load_profile("computer-vision")["id"], "cv", "alias lookup cv")
+    # lookup by id and by alias, from a data dir holding user-made profiles
+    data = WORK / "data-dir"
+    (data / "profiles").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ALPHA, data / "profiles" / "alpha.md")
+    eq(prof.load_profile("alpha", data_dir=data)["id"], "alpha", "id lookup")
+    eq(prof.load_profile("alpha-course", data_dir=data)["id"], "alpha", "alias lookup")
+    # no course profiles ship with the plugin
+    shipped = sorted(f.name for f in PROFILES.glob("*.md"))
+    eq(shipped, ["README.md", "_template.md"], "shipped profiles dir")
 
 
 @test
 def t_profile_templates_portable():
-    for pid in PROFILE_FILES:
-        txt = (PROFILES / f"{pid}.md").read_text(encoding="utf-8")
+    for pid, path in PROFILE_FILES.items():
+        txt = path.read_text(encoding="utf-8")
         meta, _ = prof.split_front_matter(txt)
         for gone in ("repo_root", "output"):
             need(gone not in meta, f"{pid}: front matter still has `{gone}`")
@@ -179,8 +181,8 @@ def t_profile_templates_portable():
 
 @test
 def t_profile_body_sections():
-    for pid in PROFILE_FILES:
-        p = prof.load_profile(str(PROFILES / f"{pid}.md"))
+    for pid, path in PROFILE_FILES.items():
+        p = prof.load_profile(str(path))
         secs = body_sections(p["_body"])
         got = [s for s in secs if s in BODY_SECTIONS]
         eq(got, BODY_SECTIONS, f"{pid}: body sections (in order)")
@@ -188,18 +190,17 @@ def t_profile_body_sections():
 
 @test
 def t_profile_no_section_sign():
-    for pid in PROFILE_FILES + ["README"]:
-        txt = (PROFILES / f"{pid}.md").read_text(encoding="utf-8")
-        need(SECTION_SIGN not in txt, f"{pid}.md contains the section sign")
+    for pid, path in {**PROFILE_FILES, "README": PROFILES / "README.md"}.items():
+        need(SECTION_SIGN not in path.read_text(encoding="utf-8"), f"{pid}.md contains the section sign")
 
 
 @test
 def t_profiles_load_without_sessions():
-    """`sessions` is optional (derived from resources/): every template must load with the block removed."""
+    """`sessions` is optional (derived from resources/): every profile must load with the block removed."""
     tmp = WORK / "no-sessions"
     tmp.mkdir(parents=True, exist_ok=True)
-    for pid in PROFILE_FILES:
-        txt = (PROFILES / f"{pid}.md").read_text(encoding="utf-8")
+    for pid, path in PROFILE_FILES.items():
+        txt = path.read_text(encoding="utf-8")
         m = re.match(r"(---\r?\n)(.*?)(\r?\n---\r?\n)(.*)\Z", txt, re.S)
         need(m, f"{pid}: front matter not found")
         fm = re.sub(r"^sessions:.*?(?=^\S|\Z)", "", m.group(2) + "\n", flags=re.M | re.S).rstrip("\n")
@@ -213,24 +214,25 @@ def t_profiles_load_without_sessions():
 
 @test
 def t_profile_sessions():
-    for pid in REAL_PROFILES:
-        p = prof.load_profile(pid)
+    for pid, path in SESSION_PROFILES.items():
+        p = prof.load_profile(str(path))
         ns = [int(s["n"]) for s in p["sessions"]]
         need(ns == sorted(set(ns)), f"{pid}: session numbers must be unique and ascending: {ns}")
         for s in p["sessions"]:
             need(s.get("title"), f"{pid}: session {s['n']} needs a title")
             if s.get("date"):
                 need(re.fullmatch(r"\d{4}-\d{2}-\d{2}", s["date"]), f"{pid}: date {s['date']}")
-    cv = prof.load_profile("cv")
-    eq(len(cv["sessions"]), 16, "cv: 16 sessions")
-    info = prof.session_info(cv, "2a")
+    alpha = prof.load_profile(str(ALPHA))
+    eq(len(alpha["sessions"]), 4, "alpha: 4 sessions")
+    info = prof.session_info(alpha, "2a")
     eq(info["n"], 2, "session_info 2a")
-    eq(info["date"], "2026-08-22", "cv session 2 date")
+    eq(info["date"], "2026-01-08", "alpha session 2 date")
+    eq(prof.session_info(alpha, 9)["title"], None, "a session absent from the table yields None")
 
 
 # ----------------------------------------------- project scaffold + resolve_inputs
-def _scaffold_cpp(name: str) -> Path:
-    """Fresh temp project with the cpp template (via init_project.py). Returns the project dir."""
+def _scaffold(name: str, profile=ALPHA) -> Path:
+    """Fresh temp project from a profile file (via init_project.py). Returns the project dir."""
     init = SCRIPTS / "init_project.py"
     if not init.is_file():
         raise Skip("scripts/init_project.py not written yet")
@@ -238,44 +240,63 @@ def _scaffold_cpp(name: str) -> Path:
     if proj.exists():
         shutil.rmtree(proj)
     proj.mkdir(parents=True)
-    r = run_script(init, "--project", proj, "--profile", "cpp")
+    r = run_script(init, "--project", proj, "--profile", profile)
     need(r.returncode == 0, f"init_project exit {r.returncode}\n{r.stdout}\n{r.stderr}")
     return proj
 
 
 @test
 def t_init_scaffolds_project():
-    proj = _scaffold_cpp("init")
+    proj = _scaffold("init")
     for rel in ("resources", "notes/basic", "notes/advanced", "pdf/basic", "pdf/advanced", ".notes-plugin-internal/profile.md"):
         need((proj / rel).exists(), f"init did not create {rel}")
     need((proj / "resources" / "README.md").is_file(), "resources/README.md missing")
     p = prof.load_profile(str(proj / ".notes-plugin-internal" / "profile.md"))
-    eq(p["id"], "cpp", "scaffolded profile id")
+    eq(p["id"], "alpha", "scaffolded profile id")
     gi = proj / ".gitignore"
     need(gi.is_file() and ".notes-plugin-internal/work" in gi.read_text(encoding="utf-8"), ".gitignore lacks .notes-plugin-internal/work/")
     # a second init without --force must not overwrite the profile
     marker = proj / ".notes-plugin-internal" / "profile.md"
     marker.write_text(marker.read_text(encoding="utf-8") + "\n<!-- edited -->\n", encoding="utf-8")
-    r = run_script(SCRIPTS / "init_project.py", "--project", proj, "--profile", "cpp")
+    r = run_script(SCRIPTS / "init_project.py", "--project", proj, "--profile", ALPHA)
     need(r.returncode != 0, "init overwrote an existing profile without --force")
     need("<!-- edited -->" in marker.read_text(encoding="utf-8"), "existing profile was modified")
 
 
 @test
-def t_resolve_dry_run_cpp_session2():
+def t_init_blank_template_and_unknown_id():
+    init = SCRIPTS / "init_project.py"
+    proj = WORK / "init-template"
+    if proj.exists():
+        shutil.rmtree(proj)
+    proj.mkdir(parents=True)
+    r = run_script(init, "--project", proj)          # default: the blank template
+    need(r.returncode == 0, f"blank-template init exit {r.returncode}\n{r.stdout}\n{r.stderr}")
+    need((proj / ".notes-plugin-internal" / "profile.md").is_file(), "template profile not written")
+    proj2 = WORK / "init-unknown"
+    if proj2.exists():
+        shutil.rmtree(proj2)
+    proj2.mkdir(parents=True)
+    r = run_script(init, "--project", proj2, "--profile", "cpp")
+    eq(r.returncode, 2, "unknown profile id exit code")
+    msg = r.stderr
+    for hint in ("--from-claude-md", "--from-syllabus", "--profile"):
+        need(hint in msg, f"error message lacks {hint}: {msg}")
+    need(not (proj2 / ".notes-plugin-internal" / "profile.md").exists(), "unknown id still wrote a profile")
+
+
+@test
+def t_resolve_dry_run_session2():
     script = SCRIPTS / "resolve_inputs.py"
     need(script.is_file(), "scripts/resolve_inputs.py missing")
-    if not SOURCE_RESOURCES.is_dir():
-        raise Skip(f"source course folder not found: {SOURCE_RESOURCES}")
-    proj = _scaffold_cpp("resolve")
+    proj = _scaffold("resolve")
     p = prof.load_profile(str(proj / ".notes-plugin-internal" / "profile.md"))
     si = prof.session_info(p, 2)
-    txt = SOURCE_RESOURCES / f"{si['stem']}.txt"
-    need(txt.is_file(), f"source transcript missing: {txt}")
-    shutil.copy2(txt, proj / "resources" / txt.name)
-    slides = SOURCE_RESOURCES / "L2.pdf"
-    need(slides.is_file(), f"source slides missing: {slides}")
-    shutil.copy2(slides, proj / "resources" / "L2.pdf")
+    # synthetic inputs: a transcript with a header naming the session, and its slides
+    (proj / "resources" / f"{si['stem']}.txt").write_text(
+        f"Lecture Title: {si['title']}\nStart Time: 08 Jan 2026\n\n00:00 Welcome to the lecture.\n",
+        encoding="utf-8", newline="\n")
+    (proj / "resources" / "L2.pdf").write_bytes(b"%PDF-1.4\n%fixture\n")
     out_json = WORK / "resolve-2.inputs.json"
     r = run_script(script, "--project", proj, "--session", 2, "--dry-run", "--json", out_json)
     need(r.returncode == 0, f"exit {r.returncode}\n{r.stdout}\n{r.stderr}")
@@ -286,8 +307,8 @@ def t_resolve_dry_run_cpp_session2():
          "transcript not under <project>/resources")
     mism = [w for w in inputs["warnings"] if "differs from profile title" in w]
     need(not mism, f"profile title does not match the transcript header: {mism}")
-    eq(inputs["session"]["date"], "2026-08-22", "cpp 2 date")
-    need(inputs["instructor_code"] and inputs["instructor_code"]["dir"] == "Lec-2", "cpp 2 code dir")
+    eq(inputs["session"]["date"], "2026-01-08", "alpha 2 date")
+    need(inputs["instructor_code"] and inputs["instructor_code"]["dir"] == "Lec-2", "alpha 2 code dir")
     need(any(Path(x).name == "L2.pdf" for x in inputs["slides"]), f"L2.pdf not matched: {inputs['slides']}")
     eq(inputs["paths"]["basic_notes"].replace("\\", "/").rstrip("/").split("/")[-2:], ["notes", "basic"],
        "paths.basic_notes")
@@ -305,47 +326,43 @@ def t_resolve_without_project_fails():
     need(r.returncode == 2, f"expected exit 2 outside a project, got {r.returncode}")
 
 
-# ------------------------------------------------------------------------ cpp
+# ---------------------------------------------------------------- fixture alpha
 @test
-def t_cpp_asr_table():
-    p = prof.load_profile("cpp")
+def t_alpha_asr_table():
+    p = prof.load_profile(str(ALPHA))
     rows = table_rows(section_text(p["_body"], "ASR corrections"))
-    need(len(rows) >= 16, f"cpp ASR table has {len(rows)} rows, need >= 16")
+    need(len(rows) >= 4, f"alpha ASR table has {len(rows)} rows, need >= 4")
     blob = " | ".join(" ".join(r) for r in rows)
-    for needle in ["hash include", "C out", "std C out", "end L", "name space", "asterisk", "ampersand",
-                   "null putter", "dot O file", "G plus plus", "obj dump", "V table", "S T L", "reserve",
-                   "unique putter", "L one", "seg fault", "G C", "nse", "you you you"]:
-        need(needle in blob, f"cpp ASR table lacks {needle!r}")
+    for needle in ["hash include", "null putter", "V table", "you you you"]:
+        need(needle in blob, f"alpha ASR table lacks {needle!r}")
 
 
 @test
-def t_cpp_session_table():
-    p = prof.load_profile("cpp")
+def t_alpha_session_table():
+    p = prof.load_profile(str(ALPHA))
     rows = [r for r in table_rows(section_text(p["_body"], "Course")) if r and re.fullmatch(r"\d+", r[0])]
-    eq([int(r[0]) for r in rows], list(range(1, 14)), "cpp session numbers in the Course table")
+    eq([int(r[0]) for r in rows], [1, 2, 3], "alpha session numbers in the Course table")
     for r, s in zip(rows, p["sessions"]):
-        eq(r[1], s["title"], f"cpp session {r[0]} title (table vs front matter)")
-        need(len(r) >= 3 and len(r[2]) > 10, f"cpp session {r[0]} needs core topics")
-    for n in (1, 2, 3, 4, 5):
-        need(prof.session_info(p, n)["stem"], f"cpp session {n} stem")
+        eq(r[1], s["title"], f"alpha session {r[0]} title (table vs front matter)")
+        need(len(r) >= 3 and len(r[2]) > 10, f"alpha session {r[0]} needs core topics")
     for n in (1, 2, 3):
-        need(prof.session_info(p, n)["date"], f"cpp session {n} date")
+        need(prof.session_info(p, n)["stem"], f"alpha session {n} stem")
+        need(prof.session_info(p, n)["date"], f"alpha session {n} date")
 
 
 @test
 def t_session_order_field():
-    """`order` is optional and numeric; cpp's extra Fast Orderbooks (n 14) sorts between 12 and 13."""
-    for pid in REAL_PROFILES:
-        for s in prof.load_profile(pid)["sessions"]:
-            if "order" in s:
-                need(isinstance(s["order"], (int, float)) and not isinstance(s["order"], bool),
-                     f"{pid}: session {s['n']} order must be a number")
-    p = prof.load_profile("cpp")
+    """`order` is optional and numeric; the extra session (n 4, order 2.5) sorts between 2 and 3."""
+    p = prof.load_profile(str(ALPHA))
+    for s in p["sessions"]:
+        if "order" in s:
+            need(isinstance(s["order"], (int, float)) and not isinstance(s["order"], bool),
+                 f"session {s['n']} order must be a number")
     by_n = {int(s["n"]): s for s in p["sessions"]}
-    eq(by_n[14].get("order"), 12.5, "cpp Fast Orderbooks order")
+    eq(by_n[4].get("order"), 2.5, "alpha extra session order")
     ranked = sorted(p["sessions"], key=lambda s: (s.get("order", s["n"]), int(s["n"])))
     seq = [int(s["n"]) for s in ranked]
-    need(seq.index(12) < seq.index(14) < seq.index(13), f"course order wrong: {seq}")
+    need(seq.index(2) < seq.index(4) < seq.index(3), f"course order wrong: {seq}")
 
 
 @test
@@ -356,33 +373,31 @@ def t_no_stale_internal_dir_name():
     for sub_ in ("skills", "agents", "reference", "profiles"):
         for f in (root / sub_).rglob("*.md"):
             for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
-                if re.search(r"(?<![\w-])\.notes(/|)", line) and "migrat" not in line.lower() and "legacy" not in line.lower():
+                if re.search(r"(?<![\w-])\.notes/", line) and "migrat" not in line.lower() and "legacy" not in line.lower():
                     bad.append(f"{f.relative_to(root)}:{i}")
     need(not bad, f"stale .notes/ mentions: {bad[:8]}")
 
 
 @test
-def t_cpp_has_no_answer_key():
-    txt = (PROFILES / "cpp.md").read_text(encoding="utf-8")
-    hits = [tok for tok in FORBIDDEN_CPP if tok in txt]
-    need(not hits, f"cpp.md contains session-2 correction facts: {hits}")
-    for tok in ["AT&T", "Intel syntax", "mangling", "endian", "buffered"]:
-        need(tok.lower() not in txt.lower(), f"cpp.md contains answer-key-adjacent term {tok!r}")
+def t_fixture_budgets():
+    b = prof.tier_cfg(prof.load_profile(str(ALPHA)), "basic")
+    eq(b["words"], [3500, 7000], "alpha basic words")
+    eq(b["minutes"], [60, 120], "alpha basic minutes (informational)")
+    eq(b["figures"], "class+generated", "alpha basic figures")
+    eq(prof.load_profile(str(ALPHA))["video"]["delete_after_ingest"], "ask", "video.delete_after_ingest")
+    for pid, path in PROFILE_FILES.items():
+        q = prof.load_profile(str(path))
+        eq(prof.tier_cfg(q, "basic")["figures"], "class+generated", f"{pid} basic figures")
+        eq(prof.tier_cfg(q, "basic")["words"], [3500, 7000], f"{pid} basic words")
+    p = prof.load_profile(str(ALPHA))
+    need("cpp" in p["snippets"] and "{src}" in p["snippets"]["cpp"]["compile"], "alpha snippets template")
 
 
 @test
-def t_cpp_budget_matches_instructor_rules():
-    p = prof.load_profile("cpp")
-    b = prof.tier_cfg(p, "basic")
-    eq(b["words"], [3500, 7000], "cpp basic words (PLAN 12.1: whole class at class depth)")
-    eq(b["minutes"], [60, 120], "cpp basic minutes (informational)")
-    eq(b["figures"], "class+generated", "cpp basic figures (PLAN 12.2)")
-    eq(p["video"]["delete_after_ingest"], "ask", "cpp video.delete_after_ingest")
-    for pid in PROFILE_FILES:
-        q = prof.load_profile(str(PROFILES / f"{pid}.md"))
-        eq(prof.tier_cfg(q, "basic")["figures"], "class+generated", f"{pid} basic figures")
-        eq(prof.tier_cfg(q, "basic")["words"], [3500, 7000], f"{pid} basic words")
-    need("cpp" in p["snippets"] and "{src}" in p["snippets"]["cpp"]["compile"], "cpp snippets template")
+def t_no_shipped_course_profiles():
+    """Profiles are user-made: nothing under profiles/ besides README and the template."""
+    for gone in ("cpp", "fmi", "cv", "devops"):
+        need(not (PROFILES / f"{gone}.md").exists(), f"profiles/{gone}.md is still shipped")
 
 
 # ------------------------------------------------------------------ reference
@@ -598,7 +613,7 @@ def section_text_letter(body: str, letter: str) -> str:
 
 @test
 def t_template_profile_is_complete():
-    txt = (PROFILES / "_template.md").read_text(encoding="utf-8")
+    txt = TEMPLATE.read_text(encoding="utf-8")
     meta, _ = prof.split_front_matter(txt)
     for k in ["schema", "id", "aliases", "title", "short", "prefix", "institution", "spelling",
               "paths", "sessions", "asr", "snippets", "tiers", "research", "callouts", "branding", "models"]:

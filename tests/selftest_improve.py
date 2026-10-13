@@ -33,7 +33,7 @@ SUBJ_CV = os.environ.get("NOTES_TEST_CV_ROOT", "/nonexistent/cv-subject")
 SCRIPTS = PLUGIN / "scripts"
 WORK = PLUGIN / "test-output" / "_i1"
 CPP = Path(SUBJ_CPP + "")
-FRAMES = CPP / "resources" / "frames" / "Pointers_and_References_-_Class_Scaler_Academy"
+FRAMES = CPP / "resources" / "frames" / "Memory_Layout_-_Class_Scaler_Academy"
 VISUALS = CPP / ".notes" / "work" / "meta" / "basic" / "02-first-program-assembly-stack-frame-endianness.visuals.yaml"
 FDE = Path(SUBJ_FDE)
 UV = shutil.which("uv") or str(Path.home() / ".local" / "bin" / ("uv.exe" if os.name == "nt" else "uv"))
@@ -726,7 +726,7 @@ def fde_like():
     (res / "manifest_class6.json").write_text("{}", encoding="utf-8")
     (res / "FlashEats.json").write_text("{}", encoding="utf-8")
     (res / "links.md").write_text("# Links\n\n- https://example.com\n", encoding="utf-8")
-    (res / "Syllabus Term 9.pdf").write_bytes(b"%PDF-1.4\n")
+    (res / "Syllabus Term 1.pdf").write_bytes(b"%PDF-1.4\n")
     (res / "2026-09-15 recording notes.pdf").write_bytes(b"%PDF-1.4\n")        # a date, not a range
     pack = res / "Pack_Class4_Student_Pack"
     (pack / "data").mkdir(parents=True)
@@ -774,7 +774,7 @@ def t_discover_multi_session_and_new_kinds():
         f = files[name]
         eq((f["kind"], f["sessions"]), (kind, ss), name)
     eq(files["links.md"]["scope"], "course", "links.md course-wide")
-    eq(files["Syllabus Term 9.pdf"]["kind"], "syllabus", "syllabus kind")
+    eq(files["Syllabus Term 1.pdf"]["kind"], "syllabus", "syllabus kind")
     eq(files["2026-09-15 recording notes.pdf"]["sessions"], [], "date file must not be assigned by a range")
     ok(all(f["scope"] != "unassigned" or f["candidates"] is not None for f in files.values()), "unassigned without reason")
     # all six transcripts are assigned (derived table) and the sessions carry their documents
@@ -801,7 +801,7 @@ def t_discover_multi_session_and_new_kinds():
 def t_init_from_syllabus_draft_profile():
     root = fde_like()
     rmtree(root / ".notes-plugin-internal")
-    syl = root / "resources" / "Syllabus Term 9.txt"
+    syl = root / "resources" / "Syllabus Term 1.txt"
     syl.write_text("Session \nNumber\nSession Title\n1\nClass 1 \u2014 Mindset and Discovery\nTopics here\n"
                    "2\nClass 2 \u2014 Workflow Mapping\nmore\n3\nClass 3 \u2014 Business KPIs\n"
                    "Assignment 1\n20%\nCapstone\n45%\n7\nClass 7 \u2014 Extra Session Only In Syllabus\n", encoding="utf-8")

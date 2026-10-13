@@ -1,14 +1,14 @@
 ---
 profile: cpp
 session: 2
-title_syllabus: "Pointers and References"
+title_syllabus: "Memory Layout"
 title_as_taught: "Stack Frames, Briefly"
 slug: stack-frames-briefly
 date: 2026-08-22
 duration_min: 120
 sources:
-  transcript: "resources/Pointers_and_References_-_Class_Scaler_Academy.txt"
-  whisper: "resources/Pointers_and_References_-_Class_Scaler_Academy.whisper.json"
+  transcript: "resources/Memory_Layout_-_Class_Scaler_Academy.txt"
+  whisper: "resources/Memory_Layout_-_Class_Scaler_Academy.whisper.json"
   frames_total: 6
   frames_read: 6
   instructor_code: ["Lec-2/main.cpp"]

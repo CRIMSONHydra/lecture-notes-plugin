@@ -38,8 +38,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 PLUGIN = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS = PLUGIN / "scripts" / "video"
 DEFAULT_REPO = "/nonexistent/cpp-subject"
-TEMPLATES = "Templates_and_Generic_Programming_-_Class_Scaler_Academy"
-PR = "Pointers_and_References_-_Class_Scaler_Academy"
+TEMPLATES = "Generic_Containers_-_Class_Scaler_Academy"
+PR = "Memory_Layout_-_Class_Scaler_Academy"
 
 RESULTS: list[tuple[str, str, str]] = []          # (status, name, detail)
 
@@ -420,7 +420,7 @@ def compare_pr(repo: pathlib.Path, pr: pathlib.Path) -> None:
 
 
 def regress(repo: pathlib.Path, work: pathlib.Path, run_it: bool) -> None:
-    print("regression: Pointers and References (2 h 16 m)")
+    print("regression: Memory Layout (2 h 16 m)")
     pr = work / "pr-profile"
     video = repo / "resources" / "videos" / f"{PR}.mp4"
     if run_it:
@@ -429,7 +429,7 @@ def regress(repo: pathlib.Path, work: pathlib.Path, run_it: bool) -> None:
         before = snapshot(repo)
         rc, out, secs = run("pipeline.py", video, "--out", pr, "--reuse",
                             "--transcript", repo / "resources" / f"{PR}.txt",
-                            "--hotwords", "C++ std::cout nullptr vtable RBP RSP objdump g++ HFT order book cache line pointer reference stack heap assembly")
+                            "--hotwords", "C++ std::cout nullptr vtable RBP RSP objdump g++ order book cache line pointer reference stack heap assembly")
         print(out[-1500:])
         check("pipeline.py on the P&R recording exits 0", rc == 0, f"rc={rc} {secs / 60:.1f} min")
         pj = jload(pr / "pipeline.json") if (pr / "pipeline.json").exists() else {"steps": {"transcribe": {}}}

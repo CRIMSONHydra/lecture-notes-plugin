@@ -67,7 +67,7 @@ services).
 
 ### E. Interview angles (full mode)
 
-Per concept or cluster: how it is asked (for example HFT-firm style questions in a subject profile), a model
+Per concept or cluster: how it is asked (for example firm-style interview questions in a subject profile), a model
 answer outline, the follow-up a strong candidate expects. Label origin: a source URL, or "own knowledge".
 
 ### F. Annotated reading list (full mode)

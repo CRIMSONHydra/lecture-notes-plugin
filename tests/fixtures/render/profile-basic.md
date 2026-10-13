@@ -2,10 +2,10 @@
 schema: 1
 id: cpp
 aliases: [hft-cpp]
-title: "High-Performance C++ [HFT]"
-short: "HP C++ · HFT"
+title: "Systems Programming 101"
+short: "SysProg 101"
 prefix: CPP
-institution: "Scaler School of Technology — SST 2028 batch, Term 9, HFT specialisation"
+institution: "Example University, synthetic render fixture"
 spelling: en-GB
 tiers:
   basic: {words: [1500, 2500], minutes: [20, 35], figures: none, diagrams: ascii, math: false}

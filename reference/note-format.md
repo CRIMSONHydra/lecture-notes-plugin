@@ -36,8 +36,8 @@ profile: cpp
 date: 2026-08-22
 duration_min: 120
 sources:
-  - "Pointers_and_References_-_Class_Scaler_Academy.txt"
-instructor_code: ["Lec-2/main.cpp", "Lec-2/demo.cpp"]
+  - "Memory_Layout_-_Class_Scaler_Academy.txt"
+instructor_code: ["Lec-2/main.c", "Lec-2/demo.c"]
 revision_minutes: 32
 verified_as_of: 2026-10-03
 ---
@@ -134,7 +134,7 @@ style class; unknown labels render as plain quotes, so use these:
 | Gotcha | gotcha | compiles/runs and is still wrong; differs by platform |
 | UB | ub | undefined behaviour (low-level subjects) |
 | Quiz tip, Exam tip, Interview tip | tip | what the assessment baits |
-| HFT reality, Market reality, Production reality, Deployment reality, Compute reality | reality | how it looks in industry |
+| Perf reality, Market reality, Production reality, Deployment reality, Compute reality | reality | how it looks in industry |
 | Class correction, Transcript correction, Class nuance | correction | verified error in class: said, actual, why |
 | Repo note | note | instructor repo differs from the class (drift is expected; never a correction) |
 | Builds on, Revisited, Recall | note | sweep-inserted cross-session links (inside `<!-- sweep:ID -->` markers) |
@@ -246,7 +246,7 @@ tier: basic
 profile: cpp
 date: 2026-08-24
 duration_min: 120
-sources: ["Pointers_and_References_2_-_Class_Scaler_Academy.txt"]
+sources: ["Memory_Layout_2_-_Class_Scaler_Academy.txt"]
 instructor_code: ["Lec-3/main.cpp"]
 revision_minutes: 28
 verified_as_of: 2026-10-03

@@ -1,7 +1,7 @@
 ---
 name: init
-description: Set up the current folder as a lecture-notes subject project. Scaffolds resources/, notes/, pdf/ and .notes-plugin-internal/, and writes .notes-plugin-internal/profile.md from a shipped template (--profile), drafts one from a subject CLAUDE.md (--from-claude-md), or drafts one from a syllabus plus the discovered resources when the subject has no CLAUDE.md (--from-syllabus, also automatic). Manual workflow — run once per subject folder as /notes:init --profile cpp.
-argument-hint: "[--profile <id|path> | --from-claude-md <path> | --from-syllabus <pdf>] [--id X] [--project DIR] [--force]"
+description: Set up the current folder as a lecture-notes subject project. Scaffolds resources/, notes/, pdf/ and .notes-plugin-internal/, and writes .notes-plugin-internal/profile.md from your own profile file or the blank template (--profile), drafts one from a subject CLAUDE.md (--from-claude-md), or drafts one from a syllabus plus the discovered resources when the subject has no CLAUDE.md (--from-syllabus, also automatic). No course profiles ship with the plugin, profiles are user-made. Manual workflow — run once per subject folder.
+argument-hint: "[--profile <path|_template> | --from-claude-md <path> | --from-syllabus <pdf>] [--id X] [--project DIR] [--force]"
 disable-model-invocation: true
 allowed-tools: Bash(uv run *) Read Write Glob Grep AskUserQuestion
 ---
@@ -44,14 +44,19 @@ somewhere to read from and write to:
   `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/extract_pdf.py" "<pdf>" --out "${CLAUDE_PLUGIN_DATA}/tmp/<name>" --pages 1-3`
   and read the `.txt` files (empty means image-only: add `--png`).
 
-## Mode A: `--profile <id|path>` (a shipped template or your own file)
+## Mode A: `--profile <path|_template>` (your own profile file, or the blank template)
 
-Run, with `<dir>` = `--project` or `.`:
+No course profiles ship with the plugin; a profile is one you wrote (or drafted with Mode B or C). Run, with
+`<dir>` = `--project` or `.`:
 
-`uv run "${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py" --project "<dir>" --profile "<id|path>"`
+`uv run "${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py" --project "<dir>" --profile "<path>"`
 
-(add `--force` and `--id X` only if the user gave them). Available template ids: `cpp`, `fmi`, `cv`, `devops`. No `--profile` and no `CLAUDE.md` in the folder: go to Mode C. Exit 2 means
-an unknown profile or an existing profile without `--force`: print the message and stop.
+`--profile _template` (or `template`) copies the blank annotated template for the user to edit by hand. Add
+`--force` and `--id X` only if the user gave them. **Without `--profile` and `--from-*`:** if the folder has a
+`CLAUDE.md`, go to Mode B with it; otherwise go to Mode C (guided drafting from the syllabus, transcript
+headers and resources). Offer the blank template only if the user asks for it or drafting is impossible.
+Exit 2 means a profile that is not a file (the error lists the ways to create one) or an existing profile
+without `--force`: print the message and stop.
 
 ## Mode B: `--from-claude-md <path>` (draft a profile for a new subject)
 
@@ -59,8 +64,7 @@ A **profile** holds everything subject-specific: YAML front matter (machine fiel
 (persona, reader, course map, house-style deltas, ASR corrections). Draft one from a subject's CLAUDE.md.
 
 1. **Read the references:** `${CLAUDE_PLUGIN_ROOT}/profiles/README.md` (schema, defaults),
-   `${CLAUDE_PLUGIN_ROOT}/profiles/_template.md`, and one finished profile as a model
-   (`${CLAUDE_PLUGIN_ROOT}/profiles/cpp.md`, or the closest condensed one). Skim the headings of
+   `${CLAUDE_PLUGIN_ROOT}/profiles/_template.md` (the annotated model: every key and body section). Skim the headings of
    `${CLAUDE_PLUGIN_ROOT}/reference/tier-basic.md` and `tier-advanced.md`.
 2. **Read the CLAUDE.md** in full, then `Glob` the project's `resources/` (if it already holds files) to learn
    the naming of transcripts, slides, recordings. Read the first 12 lines of two or three transcripts: the
@@ -95,7 +99,7 @@ case: a non-programming elective such as FDE (transcripts, slides, data files, e
    Run it with `--help` first if a flag is rejected, then Read what it printed and wrote. Syllabus PDFs: convert with
    `extract_pdf.py` as in the rules above and read the text.
 2. **Draft the profile** over that skeleton, reading `${CLAUDE_PLUGIN_ROOT}/profiles/README.md`,
-   `_template.md` and one finished profile. Fill the front matter and the ten body sections from the syllabus
+   `_template.md`. Fill the front matter and the ten body sections from the syllabus
    (course title, institution, assessment, session map), the transcript headers (title, date, duration) and the
    resources. Use **generic tier rules for a non-programming subject**:
    - no `snippets` compile step unless code languages are detected in the resources (SQL, Python notebooks

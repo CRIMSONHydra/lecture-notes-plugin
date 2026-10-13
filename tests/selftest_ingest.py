@@ -290,7 +290,7 @@ def t_layout():
 @test
 def t_init_project():
     dst = WORK / "initproj"
-    r = run("init_project.py", "--project", dst, "--profile", "cpp")
+    r = run("init_project.py", "--project", dst, "--profile", FIX / "profile-min.md")
     eq(r.returncode, 0, r.stderr + r.stdout)
     for rel in (".notes-plugin-internal/profile.md", ".notes-plugin-internal/work/build/basic", ".notes-plugin-internal/work/meta/advanced", ".notes-plugin-internal/work/reports",
                 "resources/README.md", "resources/videos", "notes/basic/figures", "notes/advanced/figures",
@@ -301,10 +301,10 @@ def t_init_project():
     # second run: refuses without --force, keeps the profile
     prof_file = dst / ".notes-plugin-internal" / "profile.md"
     prof_file.write_text(prof_file.read_text(encoding="utf-8") + "\n<!-- mine -->\n", encoding="utf-8")
-    r = run("init_project.py", "--project", dst, "--profile", "cpp")
+    r = run("init_project.py", "--project", dst, "--profile", FIX / "profile-min.md")
     eq(r.returncode, 2, "refuses to overwrite")
     truthy("--force" in r.stderr and "<!-- mine -->" in prof_file.read_text(encoding="utf-8"), r.stderr)
-    r = run("init_project.py", "--project", dst, "--profile", "cpp", "--force", "--id", "cpp2")
+    r = run("init_project.py", "--project", dst, "--profile", FIX / "profile-min.md", "--force", "--id", "cpp2")
     eq(r.returncode, 0, r.stderr)
     eq(profile.load_profile(None, project=dst)["id"], "cpp2", "--force --id")
     eq((dst / ".gitignore").read_text(encoding="utf-8").count(".notes-plugin-internal/work/"), 1, "gitignore line not duplicated")
@@ -312,10 +312,11 @@ def t_init_project():
     d2 = WORK / "initproj2"
     d2.mkdir(parents=True)
     (d2 / ".gitignore").write_text("*.o", encoding="utf-8")
-    r = run("init_project.py", "--project", d2, "--profile", FIX / "profile-cpp-min.md")
+    r = run("init_project.py", "--project", d2, "--profile", FIX / "profile-min.md")
     eq(r.returncode, 0, r.stderr)
     eq((d2 / ".gitignore").read_text(encoding="utf-8").splitlines(), ["*.o", ".notes-plugin-internal/work/"], "gitignore appended")
     r = run("init_project.py", "--project", WORK / "initproj3", "--profile", "no-such-profile")
+    truthy("--from-claude-md" in r.stderr and "--from-syllabus" in r.stderr, r.stderr)
     eq(r.returncode, 2, "unknown profile")
 
 

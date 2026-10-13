@@ -31,7 +31,7 @@ SUBJ_FDE = os.environ.get("NOTES_TEST_FDE_ROOT", "/nonexistent/fde-subject")
 SUBJ_CV = os.environ.get("NOTES_TEST_CV_ROOT", "/nonexistent/cv-subject")
 SCRIPTS = PLUGIN / "scripts"
 WORK = PLUGIN / "test-output" / "_a1" / "selftest"
-CPP_FRAMES = Path(SUBJ_CPP + "/resources/frames/Pointers_and_References_-_Class_Scaler_Academy")
+CPP_FRAMES = Path(SUBJ_CPP + "/resources/frames/Memory_Layout_-_Class_Scaler_Academy")
 UV = shutil.which("uv") or str(Path.home() / ".local" / "bin" / ("uv.exe" if os.name == "nt" else "uv"))
 TESTS = []
 
@@ -445,7 +445,7 @@ def t_init_existing_folder():
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(txt, encoding="utf-8")
     before = {p.relative_to(root).as_posix(): sha(p) for p in root.rglob("*") if p.is_file()}
-    r = run("init_project.py", "--project", root, "--profile", "cpp", "--data-dir", WORK / "dd")
+    r = run("init_project.py", "--project", root, "--profile", "_template", "--data-dir", WORK / "dd")
     eq(r.returncode, 0, r.stdout + r.stderr)
     for rel, h in before.items():
         if rel == ".gitignore":

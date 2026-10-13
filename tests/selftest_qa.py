@@ -246,7 +246,7 @@ def legacy_dir() -> Path | None:
         if not CPP_NOTES.is_dir():
             return None
         (d / ".notes-plugin-internal").mkdir(parents=True)
-        shutil.copy2(PLUGIN / "tests" / "fixtures" / "ingest" / "profile-cpp-min.md", d / ".notes-plugin-internal" / "profile.md")
+        shutil.copy2(PLUGIN / "tests" / "fixtures" / "ingest" / "profile-min.md", d / ".notes-plugin-internal" / "profile.md")
         (d / "notes" / "basic").mkdir(parents=True)
         for n in ("01", "02", "03"):
             for f in CPP_NOTES.glob(f"{n}-*.md"):

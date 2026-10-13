@@ -2,9 +2,9 @@
 schema: 1
 id: cv
 title: "Computer Vision"
-short: "Computer Vision · SST 2028"
+short: "Computer Vision · Batch 2030"
 prefix: CV
-institution: "Scaler School of Technology — SST 2028 batch, Term 9, AI/ML"
+institution: "Example University, synthetic render fixture"
 spelling: en-GB
 tiers:
   basic: {math: false}

@@ -133,8 +133,8 @@ def pdfs(proj: Path, tier: str) -> dict[str, dict]:
 def t_synthetic(sel):
     print("\n== synthetic fixtures ==")
     for tier, fixture, profile, figs in (
-        ("basic", "basic", "profile-cpp.md", ()),
-        ("advanced", "advanced", "profile-cv.md", ("02-brief-pairs.png", "02-ransac-line.png")),
+        ("basic", "basic", "profile-basic.md", ()),
+        ("advanced", "advanced", "profile-advanced.md", ("02-brief-pairs.png", "02-ransac-line.png")),
     ):
         proj = stage(f"syn-{tier}", fixture, profile, tier, figs)
         r, js = build(proj, tier)
@@ -168,7 +168,7 @@ def t_synthetic(sel):
         make_png(proj / "notes" / "advanced" / "figures" / f, 1480, 560, k + 1)
     r, _ = build(proj, "advanced", "--notes-only")
     check("two tiers share one project: advanced build ok", r.returncode == 0, (r.stdout + r.stderr)[-300:] if r.returncode else "")
-    r = run("build_pdf.py", "--profile", FIX / "profile-cpp.md", "--tier", "basic", "--src", proj / "notes" / "basic",
+    r = run("build_pdf.py", "--profile", FIX / "profile-basic.md", "--tier", "basic", "--src", proj / "notes" / "basic",
             "--pdf-dir", WORK / "ovr" / "pdf", "--build-dir", WORK / "ovr" / "build", "--notes-only", "--data-dir", DATA)
     check("explicit --src/--pdf-dir/--build-dir (no project)", r.returncode == 0 and any((WORK / "ovr" / "pdf").glob("*.pdf")),
           (r.stdout + r.stderr)[-300:] if r.returncode else "")
@@ -178,16 +178,16 @@ def t_synthetic(sel):
 
 def t_negative(sel):
     print("\n== negative fixtures ==")
-    proj = stage("neg-wide", "negative/wide-code", "profile-cpp.md", "basic")
+    proj = stage("neg-wide", "negative/wide-code", "profile-basic.md", "basic")
     r, _ = build(proj, "basic")
     a, aj = audit(proj, "basic")
     check("wide code: build ok but audit exits 1 with overflow", r.returncode == 0 and a.returncode == 1
           and "OVERFLOW" in a.stdout.upper(), a.stdout[-300:])
-    proj = stage("neg-missing", "negative/missing-figure", "profile-cv.md", "advanced")
+    proj = stage("neg-missing", "negative/missing-figure", "profile-advanced.md", "advanced")
     r, js = build(proj, "advanced")
     check("missing figure: build exit 1 with MISSING FIGURE", r.returncode == 1 and "MISSING FIGURE" in r.stdout,
           r.stdout[-300:])
-    proj = stage("neg-math", "negative/bad-math", "profile-cv.md", "advanced")
+    proj = stage("neg-math", "negative/bad-math", "profile-advanced.md", "advanced")
     r, js = build(proj, "advanced")
     a, aj = audit(proj, "advanced")
     check("bad math/mermaid: manifest counts errors, audit exits 1",
@@ -202,7 +202,7 @@ def t_legacy_cpp(sel):
         return
     proj = WORK / "legacy-cpp"
     (proj / ".notes-plugin-internal").mkdir(parents=True)
-    shutil.copy2(FIX / "profile-cpp.md", proj / ".notes-plugin-internal" / "profile.md")
+    shutil.copy2(FIX / "profile-basic.md", proj / ".notes-plugin-internal" / "profile.md")
     (proj / "notes" / "basic").mkdir(parents=True)
     for f in notes.glob("*.md"):
         shutil.copy2(f, proj / "notes" / "basic" / f.name)
@@ -230,7 +230,7 @@ def t_legacy_cv(sel):
         return None
     proj = WORK / "legacy-cv"
     (proj / ".notes-plugin-internal").mkdir(parents=True)
-    shutil.copy2(FIX / "profile-cv.md", proj / ".notes-plugin-internal" / "profile.md")
+    shutil.copy2(FIX / "profile-advanced.md", proj / ".notes-plugin-internal" / "profile.md")
     nd = proj / "notes" / "advanced"
     (nd / "figures").mkdir(parents=True)
     shutil.copy2(note, nd / note.name)
@@ -251,11 +251,11 @@ def t_legacy_cv(sel):
 def t_offline(sel):
     print("\n== offline ==")
     figs = ("02-brief-pairs.png", "02-ransac-line.png")
-    proj = stage("offline", "advanced", "profile-cv.md", "advanced", figs)
+    proj = stage("offline", "advanced", "profile-advanced.md", "advanced", figs)
     r, js = build(proj, "advanced", "--offline")
     check("offline: build with cached assets succeeds", r.returncode == 0, (r.stdout + r.stderr)[-300:] if r.returncode else "")
     empty = WORK / "empty-data"
-    proj2 = stage("offline-empty", "advanced", "profile-cv.md", "advanced", figs)
+    proj2 = stage("offline-empty", "advanced", "profile-advanced.md", "advanced", figs)
     r = run("build_pdf.py", "--project", proj2, "--tier", "advanced", "--data-dir", empty, "--offline")
     check("offline: empty cache -> clear error, exit 1", r.returncode == 1 and "--offline" in (r.stderr + r.stdout),
           (r.stderr + r.stdout)[-200:])

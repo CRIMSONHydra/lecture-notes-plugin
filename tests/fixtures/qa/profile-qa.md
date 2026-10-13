@@ -1,17 +1,17 @@
 ---
 schema: 1
 id: cpp
-title: "High-Performance C++ [HFT] (QA fixture)"
+title: "Systems Programming 101 (QA fixture)"
 short: "HP C++ - QA fixture"
 prefix: CPP
-institution: "Scaler School of Technology - fixture"
+institution: "Example University - fixture"
 spelling: en-GB
-instructor_code: {kind: github, repo: "KnightKnight27/scaler-HFT-C--2028", ref: HEAD, session_dir: "Lec-{n}"}
+instructor_code: {kind: github, repo: "example-org/course-code", ref: HEAD, session_dir: "Lec-{n}"}
 sessions:
-  - {n: 1, title: "Getting started with C++", stem: "S1", date: 2026-08-19}
-  - {n: 2, title: "Pointers and References", stem: "S2", date: 2026-08-22}
-  - {n: 3, title: "Pointers and References 2", stem: "S3", date: 2026-08-24}
-  - {n: 4, title: "Memory Management + STL"}
+  - {n: 1, title: "Intro to Systems", stem: "S1", date: 2026-08-19}
+  - {n: 2, title: "Memory Layout", stem: "S2", date: 2026-08-22}
+  - {n: 3, title: "Memory Layout 2", stem: "S3", date: 2026-08-24}
+  - {n: 4, title: "Heaps and Allocators"}
 snippets:
   cpp: {ext: .cpp, compile: "g++ -std=c++20 -O0 -Wall -Wextra {src} -o {exe}", run: "{exe}"}
 tiers:

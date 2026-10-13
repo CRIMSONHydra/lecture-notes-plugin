@@ -37,22 +37,22 @@ RES = CPP_ROOT / "resources"
 UV = shutil.which("uv") or str(Path.home() / ".local" / "bin" / ("uv.exe" if os.name == "nt" else "uv"))
 sys.path.insert(0, str(SCRIPTS))
 
-S1 = "Getting_started_with_C++_-_Class_Scaler_Academy"
-S2 = "Pointers_and_References_-_Class_Scaler_Academy"
-S3 = "Capstone_Project_-_Class_Scaler_Academy"
-S4 = "Fast_Orderbooks_-_Class_Scaler_Academy"
+S1 = "Intro_to_Systems_-_Class_Scaler_Academy"
+S2 = "Memory_Layout_-_Class_Scaler_Academy"
+S3 = "Capstone_Build_-_Class_Scaler_Academy"
+S4 = "Fast_Queues_-_Class_Scaler_Academy"
 INTERNAL = ".notes-plugin-internal"
 
 PROFILE = f"""---
 schema: 1
 id: cpp
-title: "High-Performance C++ [HFT]"
+title: "Systems Programming 101"
 short: "HP C++"
 prefix: CPP
 sessions:
   # the course table (a comment that must survive appends)
-  - {{n: 1, title: "Getting started with C++", stem: "{S1}", date: 2026-08-19}}
-  - {{n: 2, title: "Pointers and References", stem: "{S2}", date: 2026-08-22}}
+  - {{n: 1, title: "Intro to Systems", stem: "{S1}", date: 2026-08-19}}
+  - {{n: 2, title: "Memory Layout", stem: "{S2}", date: 2026-08-22}}
   - {{n: 3, title: "Capstone Project", stem: "{S3}", date: 2026-10-05}}
 asr:
   language: en
@@ -133,7 +133,7 @@ def mk_project(name: str, sessions_files=True) -> Path:
         for stem in (S1, S2, S3):
             shutil.copy2(RES / f"{stem}.txt", res / f"{stem}.txt")
         (res / "videos" / f"{S1}.mp4").write_bytes(b"")                      # zero-byte placeholder
-        shutil.copy2(RES / "Pointers_and_References_2_-_Class_Scaler_Academy.whisper.json",
+        shutil.copy2(RES / "Memory_Layout_2_-_Class_Scaler_Academy.whisper.json",
                      res / f"{S1}.whisper.json")                              # archived whisper (any real small json)
         shutil.copytree(FIX / "ingest" / "mini-project" / "resources" / "frames" / "Intro_to_Widgets_-_Class",
                         res / "frames" / S1)
@@ -308,7 +308,7 @@ def t7_migration():
         p = legacy_project("mig-" + script.split(".")[0])
         args = ["--project", p, "--data-dir", DATA, *extra]
         if script == "init_project.py":
-            args = ["--project", p, "--data-dir", DATA, "--profile", str(PLUGIN / "profiles" / "cpp.md")]
+            args = ["--project", p, "--data-dir", DATA, "--profile", str(proj / INTERNAL / "profile.md")]
         r = run(script, *args)
         ok(not (p / ".notes").exists() and (p / INTERNAL / "profile.md").is_file(), f"{script} migrated: {r.stdout[-300:]}{r.stderr[-300:]}")
     # both directories present -> refuse
@@ -452,15 +452,15 @@ def make_synthetic_res() -> Path:
     rmtree(d)
     d.mkdir(parents=True)
     body = " ".join(["the instructor explains the idea and the cache line again."] * 40)
-    for stem, title, start in ((S1, "Getting started with C++", "8/19/2026, 10:00:00 AM"),
-                               (S2, "Pointers and References", "8/22/2026, 10:00:00 AM"),
+    for stem, title, start in ((S1, "Intro to Systems", "8/19/2026, 10:00:00 AM"),
+                               (S2, "Memory Layout", "8/22/2026, 10:00:00 AM"),
                                (S3, "Capstone Project", "10/5/2026, 10:00:00 AM"),
                                (S4, "Fast Orderbooks", "10/4/2026, 10:00:00 AM")):
         (d / f"{stem}.txt").write_text(
             f"Course Name: Test Course\nLecture Title: {title}\nStart Time: {start}\nDuration: 120 minutes\n"
             f"Model use: test\n\n==================================================\n\n{body}\n",
             encoding="utf-8", newline="\n")
-    (d / "Pointers_and_References_2_-_Class_Scaler_Academy.whisper.json").write_text('{"segments": []}', encoding="utf-8", newline="\n")
+    (d / "Memory_Layout_2_-_Class_Scaler_Academy.whisper.json").write_text('{"segments": []}', encoding="utf-8", newline="\n")
     (d / "L8.pdf").write_bytes(b"%PDF-1.4\n% synthetic slide\n")
     return d
 

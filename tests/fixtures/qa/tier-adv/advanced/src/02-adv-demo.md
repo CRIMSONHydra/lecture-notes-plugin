@@ -5,7 +5,7 @@ tier: advanced
 profile: cpp
 date: 2026-08-22
 duration_min: 120
-sources: ["Pointers_and_References_-_Class_Scaler_Academy.txt"]
+sources: ["Memory_Layout_-_Class_Scaler_Academy.txt"]
 instructor_code: ["Lec-2/main.cpp"]
 revision_minutes: 25
 verified_as_of: 2026-10-03

@@ -49,7 +49,7 @@ Check the setup with `/notes:doctor` (uv, browser, GPU and Whisper backend, comp
 
 ```text
 mkdir -p ~/courses/<subject> && cd ~/courses/<subject>     # one folder per course; open Claude Code here
-/notes:init --profile cpp            # or --from-syllabus <pdf>, or --from-claude-md <path>; see Profiles
+/notes:init --from-syllabus <pdf>    # or --from-claude-md <path>, or --profile path/to/profile.md; see Profiles
 # drop transcripts / recordings / slides into resources/ (any names), then:
 /notes:scan                          # which file went to which session
 /notes:update                        # plan, confirm once, generate everything new, in course order
@@ -115,9 +115,10 @@ from a syllabus for a subject with none); the engine is generic. The plugin only
 ## Step by step
 
 1. Install the plugin (see Install) and open Claude Code **inside a subject folder** (one folder per course).
-2. `/notes:init --profile cpp` scaffolds the project and writes `.notes-plugin-internal/profile.md` (templates: `cpp`, `fmi`,
-   `cv`, `devops`; `--from-claude-md <path>` to draft a profile from a subject CLAUDE.md; or
-   `--from-syllabus <pdf>` for a subject with neither, see "Subjects without a CLAUDE.md").
+2. `/notes:init` scaffolds the project and writes `.notes-plugin-internal/profile.md`. Profiles are user-made:
+   `--from-claude-md <path>` drafts one from a subject CLAUDE.md, `--from-syllabus <pdf>` from a syllabus plus
+   your resources (see "Subjects without a CLAUDE.md"), `--profile path/to/profile.md` uses a file you wrote, and
+   `--profile _template` starts from the blank annotated template.
 3. Drop the class files into `resources/` under any names (see "What to drop in resources/" below), then
    `/notes:scan` to see which file went to which session.
 4. `/notes:update` generates everything that is new, in course order (or `/notes:lecture 3` for one session).
@@ -233,10 +234,10 @@ gap.
 legitimately; `note_stats` reports reading minutes (figures count 10 s each) and warns only when Basic reads
 harder than the class did (undefined-jargon density), never for length alone.
 
-## Running inside an existing repo (for example the cpp notes repo)
+## Running inside an existing repo (for example an existing notes repo)
 
 Open Claude Code in the repo folder that holds `resources/`, `notes/` and `pdf/` and run `/notes:init
---profile cpp`. It only creates `.notes-plugin-internal/`, `notes/basic/`, `notes/advanced/`, `pdf/basic/` and `pdf/advanced/`
+--from-claude-md CLAUDE.md` (or `--profile path/to/profile.md`). It only creates `.notes-plugin-internal/`, `notes/basic/`, `notes/advanced/`, `pdf/basic/` and `pdf/advanced/`
 and appends `.notes-plugin-internal/work/` to `.gitignore`; it never writes `resources/README.md` into your existing
 resources folder. The write guard allows only those tier subfolders and `.notes-plugin-internal/`, so your hand-written
 notes, old PDFs, build scripts and `CLAUDE.md` stay untouched (list your hand notes under
@@ -247,8 +248,9 @@ writing). Only `archive_video.py` may touch `resources/`, and only to add `frame
 ## Profiles
 
 A profile is a markdown file: YAML front matter (session map, budgets, ASR hotwords, branding, optional
-non-default `paths`) plus a prose body (persona, reader, house-style deltas, ASR corrections). The shipped
-`profiles/*.md` are **templates** with no machine-specific paths; `/notes:init` copies one to
+non-default `paths`) plus a prose body (persona, reader, house-style deltas, ASR corrections). **No course
+profiles ship with the plugin: profiles are user-made.** Only the blank annotated `profiles/_template.md` ships.
+`/notes:init` writes your profile (drafted from a CLAUDE.md or syllabus, your own file, or the template) to
 `.notes-plugin-internal/profile.md`, which you then own and edit (add sessions as transcripts land). Input paths default to
 `resources/` and are relative to `resources_dir`. Legacy notes elsewhere can be listed under
 `prior_notes_external` (read-only) for cross-links.
@@ -283,8 +285,8 @@ handouts; keep the original names), then run **`/notes:update`**.
   `/notes:lecture N --rename-slug <new>` renames (note, figures and PDF together). Stale PDFs and figures of an
   old slug are pruned. The index and compendium list each session once.
 - **Order:** chapters, previous/next links and the "earlier notes" the writers rely on follow the course order,
-  not just the number. Each profile session may carry `order` (cpp: Fast Orderbooks is session 14 but
-  `order: 12.5`, so it sits between 12 and 13). Without it: by `date`, then by `n`. A lecture the profile does
+  not just the number. Each profile session may carry `order` (e.g. a bonus session numbered 14 that
+  has `order: 12.5`, so it sits between 12 and 13). Without it: by `date`, then by `n`. A lecture the profile does
   not know yet is appended as a new row (next free number, title and date from the transcript, `order` from the
   date): check the printed title.
 - **After a run** the heavy regenerable copies (Chrome build files, slide page PNGs, fetched code) are deleted;

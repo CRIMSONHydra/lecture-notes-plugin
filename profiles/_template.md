@@ -1,13 +1,16 @@
 ---
-# Annotated empty profile. /notes:init copies it to <project>/.notes-plugin-internal/profile.md.
-# Change the values, delete the comments you do not need. Schema and rules: profiles/README.md.
+# Blank, annotated profile: the starting point for your own subject. No course profiles ship with the plugin.
+# /notes:init (no other source given) copies it to <project>/.notes-plugin-internal/profile.md; you can also copy
+# it anywhere, fill it in and pass it with `/notes:init --profile path/to/profile.md`.
+# Replace every placeholder value, delete the comments you do not need. Schema and rules: profiles/README.md.
+# Required fields: schema, id, title, short, prefix. Everything else has defaults (scripts/notes_lib/profile.py).
 schema: 1                        # required; always 1
-id: example                      # required; [a-z0-9-]+  (the name used on the command line)
+id: example                      # required; [a-z0-9-]+  (a short machine name for this subject)
 aliases: []                      # other accepted names, e.g. [ex, example-course]
 title: "Example Course Title"    # required; full title for covers
 short: "Example · Track"         # required; running header tag in the PDF
 prefix: EXA                      # required; [A-Z0-9]+, PDF filename prefix (EXA-02-slug-basic.pdf)
-institution: "Institution, batch, term, specialisation"
+institution: "Institution, programme, term"   # one line for the cover and the agents
 spelling: en-GB                  # en-GB | en-US | any  (lint hint only)
 # resources_dir: "resources"     # optional; default "resources" inside the project. Absolute = external, read-only
 # prior_notes_external: []       # optional absolute dirs of legacy notes (read-only): cross-links, knowledge ledger
@@ -16,18 +19,19 @@ paths:                           # relative to resources_dir; {n} {nn} {stem} {t
                                  #   transcripts "{stem}.txt" · recordings "videos/{stem}.mp4"
                                  #   frames "frames/{stem}" · whisper "{stem}.whisper.json"
                                  #   slides [] · handouts [] · classwork null
-  slides: ["L{n}.pdf", "L{n}_.pdf"]
+  slides: ["L{n}.pdf", "session{n}_slides.pdf"]   # alternatives, tried in order; {n} = session number
   handouts: ["*.docx"]                         # optional course-wide documents
   syllabus: "Syllabus*.pdf"
-# instructor_code: {kind: github, repo: "owner/name", ref: HEAD, session_dir: "Lec-{n}",
+# instructor_code: {kind: github, repo: "owner/name", ref: HEAD, session_dir: "session-{n}",
 #                   ignore: ["*.o", "*.out", "*.exe", "*.class", "*.swp"]}   # omit when there is none
 sessions:                        # OPTIONAL (delete the whole block to derive sessions from resources/); the course map; stem = transcript stem; date wins over the transcript header
-  - {n: 1, title: "First session title", stem: "First_session_title_-_Class_Scaler_Academy", date: 2026-01-05}
+  - {n: 1, title: "First session title", stem: "First_session_title", date: 2026-01-05}   # stem = transcript file name without .txt
   - {n: 2, title: "Second session title"}      # title only until its transcript lands
   # optional per row: order: 1.5  (display position; default = sort by date, else n). /notes:update appends new lectures here itself
-asr: {language: en, hotwords: "domain terms the Whisper prompt should know"}
-snippets:                        # templates for check_snippets: {src} {exe} {dir}
+asr: {language: en, hotwords: "domain terms, product names, jargon the Whisper prompt should know"}
+snippets:                        # templates for check_snippets: {src} {exe} {dir}; delete for a non-programming subject
   python: {ext: .py, compile: null, run: "uv run {src}"}
+  # cpp: {ext: .cpp, compile: "g++ -std=c++20 {src} -o {exe}", run: "{exe}"}   # a compiled language
 tiers:
   basic:
     words: [3500, 7000]          # prose words for a ~2 h class (scaled by duration_min/120); closing sections

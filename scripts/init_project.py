@@ -4,7 +4,7 @@
 # ///
 """Scaffold a subject project for the `notes` plugin (PLAN section 10).
 
-    uv run init_project.py [--project DIR] [--profile ID|PATH] [--id NEWID] [--force] [--data-dir D]
+    uv run init_project.py [--project DIR] [--profile PATH|_template] [--id NEWID] [--force] [--data-dir D]
                            [--json OUT] [--from-syllabus FILE | --from-resources] [--resources-dir DIR]
 
 Creates in DIR (default: cwd)::
@@ -12,8 +12,9 @@ Creates in DIR (default: cwd)::
     resources/ (+ videos/, README.md)   notes/{basic,advanced}/figures/   pdf/{basic,advanced}/
     .notes-plugin-internal/profile.md   .notes-plugin-internal/README.md   .notes-plugin-internal/work/ (git-ignored)
 
-``--profile`` is a shipped template id/alias (``cpp``, ``cv``, ``fmi``, ``devops``, ``_template``) or a path to
-a profile .md; default ``_template``. It is copied to ``.notes-plugin-internal/profile.md``; an existing profile is never
+No course profiles ship with the plugin: profiles are user-made. ``--profile`` is a path to your own profile .md,
+or ``_template`` / ``template`` for the blank annotated template (profiles/_template.md); default ``_template``.
+Other ids are rejected with the ways to create a profile. It is copied to ``.notes-plugin-internal/profile.md``; an existing profile is never
 overwritten without ``--force``.
 
 A subject with no profile and no CLAUDE.md (PLAN 16.4): ``--from-syllabus FILE`` (PDF/DOCX/TXT/MD; a name looked
@@ -70,6 +71,26 @@ def _set_id(text: str, new_id: str) -> str:
     return re.sub(r"(?m)^id:\s*.*$", f"id: {new_id}", text, count=1)
 
 
+BLANK_NAMES = {"_template", "template", "blank"}
+
+
+def resolve_profile_ref(ref: str) -> Path:
+    """A profile path, or the blank template. There are no shipped course profiles to look up by id."""
+    r = (ref or "_template").strip()
+    if r.lower() in BLANK_NAMES:
+        return plat.plugin_root() / "profiles" / "_template.md"
+    cand = Path(r).expanduser()
+    if cand.is_file():
+        return cand.resolve()
+    raise SystemExit(
+        f"error: profile {r!r} is not a file, and no course profiles ship with the plugin (profiles are user-made).\n"
+        "Create one of these ways:\n"
+        "  --profile path/to/profile.md        your own profile file (schema: profiles/README.md)\n"
+        "  --profile _template                 the blank annotated template, then edit it\n"
+        "  --from-claude-md path/to/CLAUDE.md  draft one from a subject CLAUDE.md (the /notes:init skill)\n"
+        "  --from-syllabus path/to/syllabus.pdf  draft one from a syllabus plus the discovered resources")
+
+
 def init(project: Path, profile_ref: str, new_id: str | None, force: bool, data_dir,
          from_syllabus: str | None = None, from_resources: bool = False, resources_dir: str | None = None) -> dict:
     project.mkdir(parents=True, exist_ok=True)
@@ -80,8 +101,7 @@ def init(project: Path, profile_ref: str, new_id: str | None, force: bool, data_
     if dest.exists() and not force:
         raise SystemExit(f"error: {dest} already exists (use --force to overwrite)")
     drafted: dict | None = None
-    src = prof.find_profile("_template" if (from_syllabus or from_resources) else profile_ref,
-                            data_dir=data_dir, project=project)
+    src = resolve_profile_ref("_template" if (from_syllabus or from_resources) else profile_ref)
     text = src.read_text(encoding="utf-8-sig")
     if from_syllabus or from_resources:
         from notes_lib import draft_profile
@@ -183,7 +203,7 @@ def main(argv=None) -> int:
     plat.utf8_stdio()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", default=None, help="target dir (default: cwd)")
-    ap.add_argument("--profile", default="_template", help="template id/alias or path to a profile .md")
+    ap.add_argument("--profile", default="_template", help="path to your profile .md, or _template (the blank template; default)")
     ap.add_argument("--id", dest="new_id", default=None, help="rewrite the copied profile's id")
     ap.add_argument("--force", action="store_true", help="overwrite an existing .notes-plugin-internal/profile.md")
     ap.add_argument("--data-dir", default=None)
