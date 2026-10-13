@@ -1,0 +1,9 @@
+Course Name: Widget Engineering
+Lecture Title: Dates and Junk
+Start Time: 8/22/2026, 12:00:00 PM
+Duration: 120 minutes
+Model use: N/A
+
+==================================================
+
+Short body with nothing junk in it at all.

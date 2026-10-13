@@ -1,0 +1,13 @@
+{
+  "name": "notes",
+  "displayName": "Lecture Notes",
+  "version": "1.0.0",
+  "description": "Lecture transcript/recording → shared digest → Basic (revision) and Advanced (deep-dive, web-researched) PDF notes with generated figures. OS/CPU/GPU agnostic; Python via uv.",
+  "author": {
+    "name": "CRIMSONHydra"
+  },
+  "homepage": "https://github.com/CRIMSONHydra/lecture-notes-plugin",
+  "repository": "https://github.com/CRIMSONHydra/lecture-notes-plugin",
+  "license": "MIT",
+  "keywords": ["notes", "lecture", "pdf", "whisper", "study"]
+}

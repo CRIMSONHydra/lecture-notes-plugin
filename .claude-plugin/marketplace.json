@@ -1,0 +1,14 @@
+{
+  "name": "lecture-notes",
+  "owner": {
+    "name": "CRIMSONHydra"
+  },
+  "description": "Marketplace for the lecture-notes (notes) plugin",
+  "plugins": [
+    {
+      "name": "notes",
+      "source": "./",
+      "description": "Unified lecture-notes generator: transcripts, recordings and slides to Basic and Advanced PDF notes"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Line endings: text is LF in the repo and in every checkout, on every OS.
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Binaries are never converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.mp4 binary
+*.zip binary

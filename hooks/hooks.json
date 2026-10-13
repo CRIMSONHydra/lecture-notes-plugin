@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--quiet", "--script", "${CLAUDE_PLUGIN_ROOT}/scripts/guard_hook.py"],
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--quiet", "--script", "${CLAUDE_PLUGIN_ROOT}/scripts/python_guard_hook.py"],
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

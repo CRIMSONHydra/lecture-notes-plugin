@@ -1,0 +1,15 @@
+# generated / local-only
+test-output/
+__pycache__/
+*.pyc
+.cache/
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+Thumbs.db
+# local data and scratch
+*.local
+.env

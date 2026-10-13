@@ -1,0 +1,11 @@
+# Claim checks for the 02 fixture note: every number the note states, recomputed.
+section("add(12, 13) and the frame layout")
+ok(12 + 13 == 25, "add-result", "add(12, 13) = 25")
+close(12 + 13, 25, label="add-close")
+close(1.0 / 3.0, 0.333333, tol=1e-6, label="third")
+close(np.array([0.5, 1.5]), [0.5, 1.5000004], tol=1e-6, label="array-close")
+close(80.0, 79.0, rel=0.02, label="ram-latency-within-2pct")
+ok(4 + 4 + 8 + 8 == 24, "frame-bytes", "x(4) + y(4) + saved rbp(8) + return(8) = 24 B")
+ok(Fraction(1, 3) + Fraction(1, 6) == Fraction(1, 2), "fractions")
+ok(Decimal("0.1") + Decimal("0.2") == Decimal("0.3"), "decimal-exact")
+ok(math.isclose(math.sqrt(2) ** 2, 2.0), "sqrt2")

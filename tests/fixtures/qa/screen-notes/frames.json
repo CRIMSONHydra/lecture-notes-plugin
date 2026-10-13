@@ -1,0 +1,8 @@
+[
+ {"n": 1, "t": 137, "file": "001_00-02-17.jpg", "detail_of": null, "text": ["L-2"], "said": "recap"},
+ {"n": 2, "t": 1250, "file": "002_00-20-50.jpg", "detail_of": null, "text": ["int add"], "said": "write add"},
+ {"n": 3, "t": 1300, "file": "003_00-21-40.jpg", "detail_of": 2, "region": [0, 0, 400, 300], "text": ["25"], "said": "output"},
+ {"n": 4, "t": 3000, "file": "004_00-50-00.jpg", "detail_of": null, "text": ["Desktop"], "said": "switching windows"},
+ {"n": 5, "t": 4000, "file": "005_01-06-40.jpg", "detail_of": null, "text": ["rbp"], "said": "stack frame"},
+ {"n": 6, "t": 6000, "file": "006_01-40-00.jpg", "detail_of": null, "text": ["100"], "said": "stale"}
+]
