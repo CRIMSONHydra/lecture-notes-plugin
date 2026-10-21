@@ -52,7 +52,9 @@ verified corrections fast; `deep` gives the Advanced tier cited depth. You write
    - For a 🔴 or 🟠 candidate, find a second independent source unless one normative source settles it.
    - Stop after two failed attempts on a claim: verdict `unverifiable`. A claim that only a specific compiler,
      machine or tool run can settle is `unverifiable` with evidence `needs a local run` (the writers have a
-     shell and will run it; you do not).
+     shell and will run it; you do not). Never ask for a local run of anything the execution policy forbids
+     (`reference/execution-policy.md`: cloud, IaC, clusters, remote, uncontained Docker); settle those from
+     official docs and release notes, or leave them `unverifiable`.
    - Add rows for corrections the digest missed only if you are certain and can cite a source; label them
      `K+` in the ID column.
 3. **(`verify` only) Section B: version- and time-sensitive facts** the notes will state (language-standard versions,

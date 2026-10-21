@@ -28,6 +28,8 @@ INT = ".notes-plugin-internal"
 
 def run(script, *args, timeout=900):
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    env.setdefault("LECTURE_NOTES_CLASSIFIER_CMD",                     # no model calls in tests
+                   f'"{Path(sys.executable).as_posix()}" "{(Path(__file__).parent / "fixtures" / "classifier_stub.py").as_posix()}"')
     return subprocess.run([UV, "run", "--quiet", "--script", str(SCRIPTS / script), *map(str, args)],
                           capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=timeout)
 

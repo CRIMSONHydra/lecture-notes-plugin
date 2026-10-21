@@ -13,6 +13,16 @@ plan says.
 
 ## Hard rules
 
+- **Execution policy (binding, read first).** Read `${CLAUDE_PLUGIN_ROOT}/reference/execution-policy.md`
+  before your first Bash call. You run on the student's own machine, which holds live cloud, GitHub and
+  registry credentials. Two rules decide what may run: **no cost** (no cloud or paid API, no account,
+  login, push or billable resource) and **light load** (seconds, about 1 CPU and 512 MB, nothing left
+  running). While the run is guarded, a classifier checks every command that is not read-only. It may
+  deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
+  cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
+  or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
+  such commands with representative output instead. Do not probe the environment (`docker version`,
+  `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you.
 - Read, in order: `${CLAUDE_PLUGIN_ROOT}/reference/house-style.md`, `${CLAUDE_PLUGIN_ROOT}/reference/figures.md`,
   then `${CLAUDE_PLUGIN_ROOT}/scripts/figures/example.figures.py` (the template you copy), and the helper

@@ -12,11 +12,14 @@
 
 State lives in <data>/guard.json and expires after --hours (a crashed run cannot block you forever).
 The PreToolUse hook (guard_hook.py) reads it; scripts call notes_lib.guard.assert_writable().
+While it is set, exec_guard_hook.py gates commands; `clear` first runs the run's pending cleanup plans
+(notes_lib/exec_cleanup.py).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -66,6 +69,12 @@ def main(argv=None) -> int:
             print(f"  allow   {p}")
         return 0
     if a.cmd == "clear":
+        g = guard.load_guard(ddir)
+        if g:                                   # final sweep: undo anything the run's approved commands left
+            from notes_lib import exec_cleanup
+            os.environ["LECTURE_NOTES_DATA"] = str(ddir)
+            for line in exec_cleanup.cleanup(g.get("run_id", "")):
+                print(f"  cleanup {line}")
         had = guard.clear_guard(ddir)
         print("guard cleared" if had else "no guard was active")
         return 0

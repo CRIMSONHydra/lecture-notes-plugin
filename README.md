@@ -340,10 +340,41 @@ writers costs a fraction of the first run. `--tier basic` skips deep research (v
 Recordings never leave the machine: decode, Whisper and OCR are local. Only text (transcript excerpts, screen
 notes) reaches the model, and web research sends search queries and claim text, not the video.
 
+## Execution policy (what the agents may run)
+
+The agents run on your own machine, which usually holds live cloud, GitHub, registry and cluster
+credentials. For a subject like DevOps, "run the snippet to capture real output" would otherwise mean
+`terraform apply` against your AWS account. While a run's guard is active, every command an agent wants to
+run is judged against two rules, **no cost** and **light load**
+([`reference/execution-policy.md`](reference/execution-policy.md)):
+
+- **Floor (code).** Credential and token reads, `sudo`, encoded PowerShell, environment dumps and
+  tampering with the plugin's controls are always blocked, also when wrapped in `wsl …` or `bash -c …`.
+- **Fast path (code).** Read-only commands (also inside `wsl`) and the plugin's own scripts pass instantly.
+- **Course material and toolchain.** Read-only `gh` and anonymous downloads of the repos the course
+  references are allowed. The classifier knows how tools resolve on this machine (Python behind uv, Node
+  behind fnm, `gh` only in WSL, Git Bash path rewriting), and rewrites commands to the form that works.
+- **Classifier (Claude Haiku via `claude -p`).** Everything else from a `notes:*` agent, and every `{run}`
+  snippet, is judged by the model: allow, deny, or "run exactly this instead" (for example, a `docker run`
+  rewritten with `--rm`, a `notes-` name, 256 MB and half a CPU). Verdicts are cached. Calls run with no tools,
+  no settings and a $0.10 cap. If the classifier is unavailable, the answer is deny.
+- **Cleanup.** Each approval records what it creates and how to remove it. A `SubagentStop` hook carries out
+  those removals: only `notes-*` Docker objects and temp or work paths, in Python, on any OS (inside WSL for
+  things created there). Then it sweeps labelled Docker objects. `guard.py clear` sweeps the whole run.
+- **Snippets** run with credentials stripped, git confined to local repos, and Git Bash, never the WSL
+  launcher, as `bash` on Windows.
+
+The hooks act only during a notes run, and the classifier only on the plugin's own agents, so your other
+sessions are unaffected. The floor applies to every caller while a run is active. **Setup:** log in to the
+Claude Code CLI once (`claude`). The plugin finds it on PATH, under fnm or npm, or at `LECTURE_NOTES_CLAUDE`.
+
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
+| "notes plugin: blocked during a notes run: …" | Intended (see Execution policy). Show the command without `{run}` and give representative output. If the run crashed, `/notes:doctor clear-guard` |
+| "classifier unavailable: … is `claude` logged in?" | Run `claude` once and log in, or set `LECTURE_NOTES_CLAUDE` to the CLI path |
+| Snippets time out or "cannot open E:/…" on Windows | `bash` resolved to the WSL launcher (Windows searches System32 before PATH); 1.2.0 runs Git Bash by absolute path (install Git for Windows) |
 | Whisper says "no CUDA device visible" | Switch the NVIDIA GPU on (laptops), re-run; or let it use the existing transcript |
 | CUDA DLLs fail to load on Windows | Run `transcribe.py` inside WSL2 Ubuntu |
 | "Chrome not found" | `/notes:doctor install-chromium`, or set `LECTURE_NOTES_CHROME` |

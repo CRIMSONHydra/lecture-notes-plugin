@@ -14,6 +14,16 @@ failure. You work from the digest and the research dossier, not from the raw cla
 
 ## Hard rules
 
+- **Execution policy (binding, read first).** Read `${CLAUDE_PLUGIN_ROOT}/reference/execution-policy.md`
+  before your first Bash call. You run on the student's own machine, which holds live cloud, GitHub and
+  registry credentials. Two rules decide what may run: **no cost** (no cloud or paid API, no account,
+  login, push or billable resource) and **light load** (seconds, about 1 CPU and 512 MB, nothing left
+  running). While the run is guarded, a classifier checks every command that is not read-only. It may
+  deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
+  cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
+  or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
+  such commands with representative output instead. Do not probe the environment (`docker version`,
+  `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you. Your rules are the
   reference docs and the profile.
 - Read, in order: `${CLAUDE_PLUGIN_ROOT}/reference/house-style.md`,
@@ -104,9 +114,13 @@ usual self-check loop. With `qa_report` instead, fix only the listed failures.
      worked examples and hands-on sections tied to what the class used; the Advanced tier also covers every digest gap
      fully, with no marker. Mark rebuilt-from-lost-audio passages `> **Reconstructed:** ...`.
    - Front matter per note-format, with `verified_as_of: <today>`, and `prerequisites[]` (no `companion_of`: companions are not allowed).
-5. **Snippets: run everything.** Compile and run each in `<build_dir>/snippets/<stem>/` with the
-   profile's `snippets` templates; mark `{run}` and paste this machine's real output in the `text` block
-   beneath. Platform-specific output is `{run nocheck}` with the platform named. Run the profile's debugging
+5. **Snippets: run what the execution policy allows, and nothing else.** Compile and run each allowed
+   snippet once in `<build_dir>/snippets/<stem>/` with the profile's `snippets` templates; mark `{run}` and
+   paste this machine's real output in the `text` block beneath. Snippets the policy forbids (cloud, IaC,
+   clusters, remote, uncontained Docker) have no `{run}`. Their output is representative and labelled so,
+   from the transcript, the instructor code and the official docs. Failure demos (OOM kills, port clashes,
+   auth errors, `terraform plan` diffs) are described from the docs unless they fit the policy as they
+   stand. No environment probing (`docker version`, `git config --system`, `--help` pages). Platform-specific output is `{run nocheck}` with the platform named. Run the profile's debugging
    or sanitizer variants where the ladder calls for failure demos, and paste the real diagnostics.
    Computable claims go into `<stem>.checks.py` (injected helpers `ok`, `close`, `section`, `math`,
    `Fraction`, `Decimal`, `np`).
