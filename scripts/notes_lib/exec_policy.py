@@ -193,6 +193,38 @@ def fast_allow(cmd: str) -> bool:
     return True
 
 
+_SCRIPT_EXT = (".py", ".sh", ".bash", ".ps1", ".js", ".mjs", ".rb", ".pl")
+
+
+def script_files(cmd: str, cwd: str | None, limit: int = 4, max_chars: int = 20_000) -> dict[str, str]:
+    """Contents of local scripts a command runs (outside the plugin), so the classifier judges the code, not the
+    name. Follows ``cd`` within the command; skips missing, large or plugin files."""
+    out: dict[str, str] = {}
+    here = Path(cwd) if cwd else None
+    for simple in _SPLIT.split(strip_heredocs(cmd)):
+        words = _words(simple.strip())
+        if words and words[0] == "cd" and len(words) > 1:
+            target = Path(os.path.expanduser(words[1]))
+            here = target if target.is_absolute() or here is None else here / target
+            continue
+        for w in words[1:] if words else []:
+            if not w.lower().endswith(_SCRIPT_EXT) or w.startswith("-"):
+                continue
+            p = Path(os.path.expanduser(w))
+            if not p.is_absolute() and here is not None:
+                p = here / p
+            try:
+                if not p.is_file() or p.stat().st_size > 200_000 or _under_plugin(str(p)):
+                    continue
+                text = p.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            out[p.as_posix()] = text[:max_chars] + ("\n… (truncated)" if len(text) > max_chars else "")
+            if len(out) >= limit:
+                return out
+    return out
+
+
 _STRIP_PREFIXES = ("AWS_", "AZURE_", "ARM_", "GOOGLE_", "GCLOUD_", "CLOUDSDK_", "DIGITALOCEAN_", "DO_",
                    "TF_VAR_", "TF_TOKEN_", "VAULT_", "KUBE", "HELM_", "GITHUB_", "GH_", "GITLAB_", "NPM_TOKEN",
                    "PYPI_", "TWINE_", "DOCKER_", "SSH_", "OPENAI_", "ANTHROPIC_", "HF_")

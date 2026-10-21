@@ -80,9 +80,14 @@ def main() -> int:
             project = None
         shell = "powershell" if evt.get("tool_name") == "PowerShell" else (
             "bash (Git Bash on Windows)" if plat.os_kind() == "windows" else "bash")
-        item = {"id": "1", "kind": "command", "text": cmd, "cwd": evt.get("cwd")}
+        item = {"id": "1", "kind": "command", "text": cmd, "cwd": evt.get("cwd"),
+                "scripts": ep.script_files(cmd, evt.get("cwd"))}           # judge the code, not its file name
+        root = str(project) if project else ""
+        workspace = {"project": root, "plugin_root": str(ep.PLUGIN_ROOT),
+                     "writable": list(g.get("allow") or []),             # the job's own output folders
+                     "read_only": [p for p in g.get("protect") or [] if p.rstrip("/\\") != root.rstrip("/\\")]}
         v = ec.judge([item], {"run_id": g.get("run_id", ""), "agent_type": evt.get("agent_type"), "shell": shell,
-                              "course_resources": ec.course_resources(project)})["1"]
+                              "course_resources": ec.course_resources(project), "workspace": workspace})["1"]
         if v["decision"] == "allow":
             from notes_lib import exec_cleanup
             v = dict(v, cleanup=exec_cleanup.prefilter(v.get("cleanup") or []))   # never what already exists
