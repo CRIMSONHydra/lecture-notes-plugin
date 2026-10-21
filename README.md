@@ -363,7 +363,7 @@ run is judged against two rules, **no cost** and **light load**
   no settings and a $0.10 cap. If the classifier is unavailable, the answer is deny.
 - **Cleanup.** Each approval records what it creates and how to remove it; a plan for something that already
   exists is dropped at approval. A `SubagentStop` hook carries out the rest: only `notes-*` temp entries that
-  appeared after the approval, never anything inside the project, and only Docker objects carrying both the
+  appeared during the run, never anything inside the project, and only Docker objects carrying both the
   `notes-` name and the run's label. In Python, on any OS; inside the WSL distribution for things created
   there. Then it sweeps the Docker objects labelled for that agent; `guard.py clear` sweeps the whole run.
 - **Agents cannot switch it off.** Any subagent spawned during a run is gated (not only `notes:*` ones); the

@@ -112,7 +112,11 @@ os.environ["LECTURE_NOTES_CLASSIFIER_CMD"] = STUB
 
 # cleanup validation and ledger-driven cleanup
 roots = [Path(tempfile.gettempdir()).resolve()]
-leftover = Path(tempfile.gettempdir()) / "notes-selftest-leftover"
+# a per-run name: NTFS gives a re-created name its old timestamps for 15 s, and a stale dir from an aborted run
+# would look older than this run
+leftover = Path(tempfile.gettempdir()) / f"notes-selftest-leftover-{os.getpid()}"
+os.environ["NOTES_TEST_LEFTOVER"] = str(leftover)
+shutil.rmtree(Path(tempfile.gettempdir()) / "notes-selftest-leftover", ignore_errors=True)   # older test runs
 SAFE = ["docker rm -f notes-web", "docker volume rm notes-data", "docker rmi notes-app:1",
         f"rm -rf {leftover.as_posix()}", "wsl rm -rf /tmp/notes-x", "wsl -- docker rm -f notes-web",
         f'Remove-Item -Recurse -Force "{leftover}"']
@@ -152,8 +156,9 @@ ledger.write_text(json.dumps({"t": time.time() + 5, "agent": "agent-2", "kind": 
                   encoding="utf-8")                                                                           # `old` existed
 exec_cleanup.cleanup("oldrun", "agent-2")
 if not old.exists():
-    bad.append(("a path that existed before the approval must survive", str(old)))
+    bad.append(("a path that existed before the run started must survive", str(old)))
 shutil.rmtree(old, ignore_errors=True)
+shutil.rmtree(leftover, ignore_errors=True)
 
 # regression (2026-10-21): plans that deleted a run's own sidecars and work/meta/<tier> must never run
 proj = Path(TD) / "proj"
