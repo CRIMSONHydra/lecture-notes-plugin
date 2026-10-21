@@ -42,16 +42,36 @@ disabled, so a typo fails instead of opening a login window.
 
 ## Toolchain and platforms
 
-Commands are judged for the machine they run on (Windows, macOS or Linux; Bash or PowerShell). The
-classifier is told how tools resolve here, probed once a day:
+Commands are judged for the machine they run on (Windows, macOS or Linux; Bash or PowerShell).
+`notes_lib/toolchain.py` **detects** how tools resolve there; nothing about one machine is assumed on
+another. It probes once a day, and again whenever PATH changes:
 
-- Python behind uv, so a bare `python` becomes `uv run python …`.
-- Node behind fnm, nvm or volta, so `node …` becomes `fnm exec --using default node …`.
-- Tools that exist only inside WSL, so `gh …` becomes `wsl gh …`. On Windows, a command that is better run
-  in Linux can run as `wsl … <command>`; the command inside is judged like any other.
-- Git Bash rewriting `/path` arguments for Windows programs, so `MSYS_NO_PATHCONV=1` is added.
+- Which common tools are on PATH as an agent's shell sees it, and whether `python` is only the Windows Store
+  placeholder.
+- For each tool that is missing, which installed manager provides it, with the version that manager would
+  actually use:
 
-A rewrite that fixes the toolchain is returned like any other rewrite: run the exact command given.
+  | Manager | Provides | Invocation |
+  | --- | --- | --- |
+  | uv | Python | `uv run python …` |
+  | fnm | Node | default alias, else the newest installed version |
+  | volta | Node | `volta run …` |
+  | nvm | Node | `default` alias, else `node` |
+  | mise | any tool | `mise exec -- …` |
+  | asdf | any tool | its shims |
+  | pyenv | Python | `pyenv exec …` |
+  | conda | Python | `conda run -n base …` |
+  | SDKMAN | Java, Gradle, Maven | the SDKMAN init script |
+  | install dirs | Rust, Go, Bun, Deno | `~/.cargo/bin`, `~/go/bin`, `~/.bun/bin` and similar |
+
+- On Windows, each WSL distribution: the default one and any already running are probed for tools.
+  Stopped ones are listed but never booted, and Docker's internal distros are skipped.
+- Shell quirks for the shell actually in use: Git Bash rewrites `/path` arguments, so `MSYS_NO_PATHCONV=1`
+  is needed; PowerShell needs its own variable and removal syntax.
+
+The classifier rewrites a command that would fail as typed into the form that works here, for example
+`uv run python …`, `fnm exec --using v22.3.0 node …` or `wsl gh …`. Run the exact command it gives. Only
+how each manager is invoked is fixed in code (`toolchain.RESOLVERS`).
 
 ## What is typically denied
 

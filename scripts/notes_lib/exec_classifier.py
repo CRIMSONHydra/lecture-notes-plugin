@@ -239,9 +239,9 @@ def _call(items: list[dict], context: dict) -> dict[str, dict]:
 def judge(items: list[dict], context: dict | None = None) -> dict[str, dict]:
     """Verdict per item id. ``items``: ``{id, kind: command|snippet, text, lang?, cwd?}``."""
     tc = toolchain.describe()
-    context = dict(context or {}, os=plat.os_kind(), cpu_count=os.cpu_count(), docker_running=docker_running(),
-                   toolchain=tc["hints"])
+    context = dict(context or {}, os=plat.os_kind(), cpu_count=os.cpu_count(), docker_running=docker_running())
     context.setdefault("shell", "powershell" if plat.os_kind() == "windows" else "bash")
+    context["toolchain"] = toolchain.hints_for(tc, context["shell"])     # detected on this machine, per shell
     repos = [r.lower() for r in context.get("course_resources") or []]
     cache = _load_cache()
     out, todo, keys = {}, [], {}
