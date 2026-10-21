@@ -18,7 +18,9 @@ Reads every session's ``work/sessions/NN/digest.md`` (no transcripts, no LLM) an
      "shared_exact": [{key, kind, sessions: [{n, id|term}]}],   # identical normalised names in >= 2 sessions
      "missing_digests": [n, ...],
      "pending": [{id, kind: marker|legacy, tier, note, from, line, end_line, heading, targets, target_notes, present, missing,
-                  resolvable, text, replaces}]}      # pending-ref markers + legacy "has no note yet" phrases (PLAN 18)
+                  resolvable, text, replaces}],      # pending-ref markers + legacy "has no note yet" phrases (PLAN 18)
+     "process_talk": [{id, tier, note, from, line, end_line, heading, phrase, replaces, text}]}
+                                                     # prose about how the note was made: each needs a ``scrub`` edit
 
 Which concepts *are the same idea* under different names ("stack frame" vs "activation record") is NOT decided
 here: the sweep-analyst agent does that from this file and writes ``work/course/concepts.json``.
@@ -34,7 +36,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from notes_lib import digest as dg, guard, layout, notefile, pending as pn, platform as plat, profile as prof  # noqa: E402
+from notes_lib import digest as dg, guard, layout, notefile, pending as pn, platform as plat, process_talk, profile as prof  # noqa: E402
 from notes_lib.profile import split_front_matter  # noqa: E402
 
 plat.utf8_stdio()
@@ -196,7 +198,25 @@ def build(lay, profile: dict, only: set[int] | None) -> dict:
         shared.append({"key": key, "kind": kind, "sessions": refs})
     out_sessions = [e for e in full if only is None or e["n"] in only]
     return {"schema": 1, "sessions": out_sessions, "shared_exact": shared, "missing_digests": missing,
-            "pending": pending_inventory(lay, only)}
+            "pending": pending_inventory(lay, only), "process_talk": process_talk_inventory(lay, only)}
+
+
+def process_talk_inventory(lay, only: set[int] | None) -> list[dict]:
+    """Every passage that talks about how a note was made (``notes_lib.process_talk``), for ``scrub`` edits:
+    ``{id, tier, note, from, line, end_line, heading, phrase, replaces, text}``. ``id`` is stable per note and order."""
+    items: list[dict] = []
+    for t in layout.TIERS:
+        d = lay.notes(t)
+        if not d.is_dir():
+            continue
+        for f in sorted(d.glob("[0-9]*.md")):
+            m = re.match(r"\d+", notefile.note_id(f.name)[0])
+            if not m or (only is not None and int(m.group()) not in only):
+                continue
+            for k, it in enumerate(process_talk.scan(f.read_text(encoding="utf-8-sig")), 1):
+                items.append({"id": f"scrub-{int(m.group()):02d}-{k:03d}", "tier": t, "note": f.name,
+                              "from": int(m.group()), **it})
+    return items
 
 
 def main(argv=None) -> int:
@@ -229,6 +249,12 @@ def main(argv=None) -> int:
         print(f"pending references: {len(pend)} ({sum(p['kind'] == 'marker' for p in pend)} pending-ref marker(s), "
               f"{sum(p['kind'] == 'legacy' for p in pend)} legacy stale phrase(s)); {len(res)} resolvable now "
               f"(target note exists), {len(pend) - len(res)} still waiting")
+    if inv["process_talk"]:
+        by = {}
+        for it in inv["process_talk"]:
+            by[it["tier"]] = by.get(it["tier"], 0) + 1
+        print(f"process talk: {len(inv['process_talk'])} passage(s) about how the notes were made "
+              f"({', '.join(f'{k} {v}' for k, v in by.items())}); each needs a scrub edit")
     if inv["missing_digests"]:
         print(f"no digest yet for session(s): {', '.join(map(str, inv['missing_digests']))}")
     return 0

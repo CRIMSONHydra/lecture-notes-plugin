@@ -139,6 +139,14 @@ Never propagate an error; never nitpick a deliberate, flagged simplification. Fo
 - Cross-link **forward** ("move semantics gets its own note in session 6") instead of duplicating a topic
   taught later; link **back** to earlier notes for vocabulary.
 - Never write em-dash chains or rhetorical filler. Say the thing.
+- **Write for the student, never about how the note was made.** The reader does not know or care that agents,
+  a digest, an execution policy or a particular laptop produced this. Never write "representative output",
+  "not run on this machine/here", "this laptop", "the digest", "the inputs", "no frames", "the classifier",
+  "`{run}`" or any plugin step in the prose. Introduce example output as "Output:" or "Output (from the class
+  demo):"; state a platform difference as a fact about the platform ("`ip` is Linux-only; Windows has
+  `ipconfig`"); if output varies, say what varies ("pod name suffixes are random"). Provenance about the
+  *class* is fine and stays in its callouts (`Reconstructed`, `Repo note`, `Class correction`). `lint_note`
+  fails such prose as `process-talk`; `/notes:sweep` rewrites any that slipped through.
 
 ### Pending references (earlier session, note not written yet)
 

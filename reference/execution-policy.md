@@ -33,7 +33,7 @@ its data directory (the guard, the ledger, the cache): the Write/Edit hook refus
 
 A block is final. **Do not look for another route to the same command.** That includes `bash -c`, a
 script file, a Python `subprocess` call, `wsl`, `cmd /c`, a different binary name, a local copy of the
-profile or the plugin, or editing a hook. Rewrite the snippet as representative output instead.
+profile or the plugin, or editing a hook. Show the snippet with its expected output instead (below).
 
 ## Course material from GitHub
 
@@ -90,23 +90,30 @@ can still be denied, and a contained Docker demo on a small image can be allowed
 ## What to write instead
 
 A snippet that may not run goes in a normal fence **without** `{run}`/`{compile}`. It is followed by a
-`text` block introduced as representative output, built from the transcript, the screen notes, the
-instructor code and the official docs:
+`text` block with its expected output, built from the transcript, the screen notes, the instructor code and
+the official docs, and introduced the way a textbook would:
 
 ````markdown
 ```bash
 terraform plan -out tfplan
 ```
 
-Representative output (from the class demo and the Terraform docs; not run on this machine):
+Output (from the class demo):
 
 ```text
 Plan: 3 to add, 0 to change, 0 to destroy.
 ```
 ````
 
-Never claim that representative output was captured live, and never invent a flag or a field to make it
-look real. In your return, list the snippets you left as representative (`snippets run/representative`).
+**The notes are for a student, not about how they were made.** Never write in a note whether or why a command
+was run, "representative", "not run on this machine", "this laptop", the execution policy, the classifier, the
+digest, the inputs, the transcript or frames you had, or any agent or tool of this plugin. A platform difference
+is a fact about the platform ("`ip` is Linux-only; Windows has `ipconfig`"), not about the machine the notes were
+built on. `lint_note` fails such prose (`process-talk`) and `/notes:sweep` rewrites what slipped through.
+Provenance about the *class* stays: `Reconstructed`, `Repo note` and `Class correction` callouts.
+
+Never invent a flag, a field or an output line to make an example look real. In your return (not in the note),
+list the snippets you did not run (`snippets run/not run`).
 
 ## Setup
 

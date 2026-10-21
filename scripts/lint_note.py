@@ -48,7 +48,7 @@ from urllib.parse import unquote
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from notes_lib import digest as digest_lib, guard, layout, notefile, pending as pending_lib, platform as plat, profile as prof  # noqa: E402
+from notes_lib import digest as digest_lib, guard, layout, notefile, pending as pending_lib, platform as plat, process_talk, profile as prof  # noqa: E402
 
 plat.utf8_stdio()
 
@@ -81,7 +81,7 @@ BANNED_DEFAULT = [r"as you know", r"recall that", r"obviously", r"it is well kno
                   r"standard\s+(?:practice|trick|technique|approach|procedure|knowledge)\b"]
 MECHANICAL = {"dup-session", "split-note", "section-sign", "h1-format", "h1-count", "h1-number", "filename", "code-wide", "code-wide-warn",
               "table-wide", "image-missing", "image-external", "image-format", "placeholder",
-              "heading-number", "html-disallowed", "dead-link", "fm-tier"}
+              "heading-number", "html-disallowed", "dead-link", "fm-tier", "process-talk"}
 
 
 class Lint:
@@ -301,6 +301,16 @@ def check_pending(L: Lint, path: Path, raw: str) -> None:
                it["line"], raw_line=True)
 
 
+def check_process_talk(L: Lint, raw: str) -> None:
+    """Prose about how the note was made (agents, the execution policy, "this machine", the digest, the inputs):
+    a student does not need it. Reword to talk about the subject only."""
+    for it in process_talk.scan(raw):
+        L.err("process-talk", f"talks about how the note was made ({it['phrase']}): reword for the reader. Output "
+              "that was not run is introduced as 'Output:' or 'Expected output:' (optionally '(from the class "
+              "demo)'), without saying whether or why it was run; a platform difference is stated as a fact about "
+              "the platform. Drop a sentence that is only about the pipeline.", it["line"], raw_line=True)
+
+
 def check_minor_slips(L: Lint, body: str, headings, tier: str) -> None:
     """Basic tier: `## Minor slips in class` is a `| said | actual |` table; yellow corrections live there."""
     if tier != "basic":
@@ -393,6 +403,7 @@ def lint_note(path: Path, cfg: dict, tier: str, *, legacy: bool, digest: Path | 
 
     check_sweep(L, path, raw)
     check_pending(L, path, raw)
+    check_process_talk(L, raw)
 
     # headings ----------------------------------------------------------------------------------------------
     blocks = list(notefile.iter_blocks_ex(body))

@@ -261,6 +261,26 @@ def t_offline(sel):
           (r.stderr + r.stdout)[-200:])
 
 
+def t_style(sel):
+    """Callouts get their colour class, headings their section-number span, and the colour layer is in both sheets."""
+    print("\n== style ==")
+    sys.path.insert(0, str(SCRIPTS))
+    from render import css as css_mod, markdown as md_mod
+    md = md_mod.make_md("basic", False, {"Cost reality": "reality"})
+    out = md.render("> **Note:** a\n\n> **Class correction (\U0001f7e0 high):** b\n\n> **Cost reality:** c\n\n> plain\n")
+    check("style: callouts carry their class",
+          all(f'class="cal {c}"' in out for c in ("note", "correction", "reality")) and "<blockquote>\n<p>plain" in out,
+          out[:300])
+    h = md_mod.mark_secno('<h2 id="sec-3.2">§3.2 Loops</h2><h3 id="sec-3.2.1">§3.2.1 for</h3>')
+    check("style: section numbers wrapped, text unchanged",
+          h.count('<span class="secno">') == 2 and re.sub(r"<[^>]+>", "", h) == "§3.2 Loops§3.2.1 for", h)
+    for tier in ("basic", "advanced"):
+        sheet = css_mod.css_for({"branding": {"accent": "#0b5394", "accent2": "#c55a11"}}, tier)
+        check(f"style: colour layer present ({tier})",
+              "blockquote.cal.gotcha>p:first-child>strong:first-child" in sheet and "pre.code.lang-yaml" in sheet
+              and ".secno" in sheet and "@@" not in sheet)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-legacy", action="store_true")
@@ -268,7 +288,7 @@ def main() -> int:
     args = ap.parse_args()
     rmtree(WORK)
     WORK.mkdir(parents=True)
-    tests = [("synthetic", t_synthetic), ("negative", t_negative), ("legacy_cpp", t_legacy_cpp),
+    tests = [("style", t_style), ("synthetic", t_synthetic), ("negative", t_negative), ("legacy_cpp", t_legacy_cpp),
              ("legacy_cv", t_legacy_cv), ("offline", t_offline)]
     for name, fn in tests:
         if args.k and args.k not in name:

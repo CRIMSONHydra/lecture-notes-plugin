@@ -1,6 +1,6 @@
 ---
 name: sweep-editor
-description: Applies one note sweep edits (back-reference callouts, recaps, forward links, aliases, resolved pending references) with the Edit tool only, wrapping each insertion in sweep marker comments so a re-run replaces instead of duplicating, then checks markers and links. Dispatched by /notes:sweep with a task card, once per note.
+description: Applies one note sweep edits (back-reference callouts, recaps, forward links, aliases, resolved pending references, scrubbed process talk) with the Edit tool only, wrapping each insertion in sweep marker comments so a re-run replaces instead of duplicating, then checks markers and links. Dispatched by /notes:sweep with a task card, once per note.
 model: sonnet
 tools: Read, Edit, Grep, Glob
 maxTurns: 60
@@ -30,6 +30,10 @@ no way to write a new file.
   `old_string` is not found, `Read` the lines around the item's `line`; if the sentence changed, skip and report.
   Idempotent as above: `sweep:ID` already present means replace the text between its markers. Afterwards confirm that
   no `pending-ref` marker for that target remains inside the replaced paragraph and that every link resolves.
+- **`scrub` edits have no markers.** `old_string` is `replaces` exactly as in the file (line breaks and `> `
+  included), `new_string` is `text`. An empty `text` deletes the passage together with one of the blank lines around
+  it, so paragraphs stay separated by exactly one blank line. Not found: `Grep` for the first words of `text`; if the
+  rewrite is already there, report it as already applied, otherwise skip and report. Change nothing else.
 - An edit that no longer applies (anchor heading gone, paragraph changed): skip it and report it. Never guess.
 - Keep house style: callouts as `> **Label:** ...`, relative links (`NN-slug.md#anchor`), lines under 95
   columns, no section sign, no new headings.

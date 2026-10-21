@@ -56,6 +56,7 @@ outlines, never whole notes) and you write exactly two JSON files.
    | `alias` | at first use of a drifted term | a short parenthetical, "(called ... in session N)" |
    | `example` | where an instructor example recurs | one line plus a link instead of a second full copy |
    | `resolve-pending` | in place of a pending reference (see step 4) | the same sentence, content kept, with real links |
+   | `scrub` | in place of a passage about how the note was made (see step 5) | the passage rewritten for the reader, or empty |
 
 4. **Pending references are mandatory, not optional.** Notes written in parallel cite sessions whose note did not
    exist yet, either as `<!-- pending-ref:NN -->...<!-- /pending-ref:NN -->` or (legacy) as a sentence such as
@@ -78,6 +79,19 @@ outlines, never whole notes) and you write exactly two JSON files.
    `{"id", "note", "line", "reason": "target-missing", "missing": [...]}` under `unresolved` so the report names them.
    They stay in the note (a marker keeps the writer's own wording). These edits are exempt from the cap below. With
    `previous_plan`, carry every earlier `resolve-pending` edit over unchanged (its marker is already in the note).
-5. Keep the other edit types small: only edits a reader would miss, at most about 6 per note.
-6. Verify before returning: every `note` and every link file exists (`Glob`), every anchor heading exists
-   (`Grep`), ids are unique, and every `resolvable` pending item has its `resolve-pending` edit.
+5. **Process talk is mandatory, like pending references.** The inventory's `process_talk` lists every passage of
+   this tier that talks about how the note was made instead of the subject (`phrase` says which kind: "representative
+   output", "this machine", "the digest", "not run here", …). For **every** item write one edit
+   `{"id": <the item id, unchanged>, "note", "tier", "anchor": <item.heading>, "type": "scrub",
+   "replaces": <item.replaces, exact, line breaks included>, "text": <the reader-facing rewrite>, "rationale"}`.
+   `text` rules: keep the passage's markdown shape (a `> **Label:**` callout stays one, a list item keeps its bullet,
+   a table row keeps its cells) and **every fact about the subject**; drop whether or why something was run, the
+   machine, the execution policy, the digest, the inputs, frames, agents and plugin steps. An output lead-in becomes
+   "Output:" or "Output (from the class demo):" (say what varies if it matters: "pod name suffixes are random").
+   "This laptop's numbers" becomes "Example numbers"; "on this machine" in a table becomes "on your machine" or
+   goes. A passage that is only about the pipeline gets `text: ""` (it is deleted). These edits are exempt from the
+   cap below; with `previous_plan` there is nothing to carry over (an applied scrub leaves no trace).
+6. Keep the other edit types small: only edits a reader would miss, at most about 6 per note.
+7. Verify before returning: every `note` and every link file exists (`Glob`), every anchor heading exists
+   (`Grep`), ids are unique, every `resolvable` pending item has its `resolve-pending` edit, and every
+   `process_talk` item of this tier has its `scrub` edit.

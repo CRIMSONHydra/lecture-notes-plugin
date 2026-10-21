@@ -22,7 +22,7 @@ failure. You work from the digest and the research dossier, not from the raw cla
   deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
   cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
   or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
-  such commands with representative output instead. Do not probe the environment (`docker version`,
+  such commands with their expected output instead, and never write in a note whether or why a command was run. Do not probe the environment (`docker version`,
   `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you. Your rules are the
   reference docs and the profile.
@@ -117,7 +117,8 @@ usual self-check loop. With `qa_report` instead, fix only the listed failures.
 5. **Snippets: run what the execution policy allows, and nothing else.** Compile and run each allowed
    snippet once in `<build_dir>/snippets/<stem>/` with the profile's `snippets` templates; mark `{run}` and
    paste this machine's real output in the `text` block beneath. Snippets the policy forbids (cloud, IaC,
-   clusters, remote, uncontained Docker) have no `{run}`. Their output is representative and labelled so,
+   clusters, remote, uncontained Docker) have no `{run}`. Their output is introduced as "Output:" or
+   "Output (from the class demo):", never as "representative" or "not run", and is built
    from the transcript, the instructor code and the official docs. Failure demos (OOM kills, port clashes,
    auth errors, `terraform plan` diffs) are described from the docs unless they fit the policy as they
    stand. No environment probing (`docker version`, `git config --system`, `--help` pages). Platform-specific output is `{run nocheck}` with the platform named. Run the profile's debugging

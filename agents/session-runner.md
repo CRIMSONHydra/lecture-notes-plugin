@@ -21,7 +21,7 @@ stage agents, check their files and record the result.
   deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
   cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
   or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
-  such commands with representative output instead. Do not probe the environment (`docker version`,
+  such commands with their expected output instead, and never write in a note whether or why a command was run. Do not probe the environment (`docker version`,
   `git config --system`, `--help` pages).
 - When a stage agent reports a policy block, accept it as final. Never re-dispatch with instructions,
   a local profile copy or a changed `snippets` template that would get around it.
