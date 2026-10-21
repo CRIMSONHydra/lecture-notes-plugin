@@ -287,7 +287,7 @@ dl.metablock dt{font-size:7.4px}
 COLOR = r"""
 :root{
   --accent-t:color-mix(in srgb, var(--accent) 9%, #fff);
-  --accent-t2:color-mix(in srgb, var(--accent) 16%, #fff);
+  --accent-t2:color-mix(in srgb, var(--accent) 22%, #fff);
   --accent2-t:color-mix(in srgb, var(--accent2) 10%, #fff);
 }
 h2{color:var(--accent);border-bottom:0;border-left:4px solid var(--accent);padding:1.2mm 0 1.2mm 2.6mm;
@@ -334,19 +334,29 @@ blockquote.cal.buildson>p:first-child>strong:first-child{color:#2f5f86}
 /* details (answers) */
 details{background:#eef8f1;border-left-color:#2f855a}
 
-/* code: the left edge tells the language */
-pre.code{border-left-width:3.5px}
-pre.code.lang-bash,pre.code.lang-sh,pre.code.lang-shell,pre.code.lang-console,pre.code.lang-zsh{border-left-color:#2f855a}
-pre.code.lang-powershell,pre.code.lang-ps1,pre.code.lang-pwsh,pre.code.lang-bat,pre.code.lang-cmd{border-left-color:#2b6cb0}
-pre.code.lang-yaml,pre.code.lang-yml{border-left-color:#805ad5}
-pre.code.lang-python,pre.code.lang-py{border-left-color:#3b6ea5}
-pre.code.lang-dockerfile,pre.code.lang-docker{border-left-color:#0b7285}
-pre.code.lang-json,pre.code.lang-toml,pre.code.lang-ini{border-left-color:#d97706}
-pre.code.lang-hcl,pre.code.lang-terraform,pre.code.lang-tf{border-left-color:#6b46c1}
-pre.code.lang-javascript,pre.code.lang-js,pre.code.lang-typescript,pre.code.lang-ts{border-left-color:#b7791f}
-pre.code.lang-go,pre.code.lang-java,pre.code.lang-c,pre.code.lang-cpp,pre.code.lang-rust{border-left-color:#c05621}
-pre.code.lang-nginx,pre.code.lang-conf,pre.code.lang-xml,pre.code.lang-html{border-left-color:#9c4221}
-pre.code.lang-text{border-left-color:#a0aec0;background:#f7f8fa}
+/* code: the language colour (--lc) marks the left edge and tints the block */
+pre.code{--lc:#7f95ad;border-color:color-mix(in srgb, var(--lc) 22%, #fff);border-left:4.5px solid var(--lc);
+  background:color-mix(in srgb, var(--lc) 6%, #fcfdfe)}
+pre.code.lang-bash,pre.code.lang-sh,pre.code.lang-shell,pre.code.lang-console,pre.code.lang-zsh{--lc:#2f855a}
+pre.code.lang-powershell,pre.code.lang-ps1,pre.code.lang-pwsh,pre.code.lang-bat,pre.code.lang-cmd{--lc:#2b6cb0}
+pre.code.lang-yaml,pre.code.lang-yml{--lc:#805ad5}
+pre.code.lang-python,pre.code.lang-py{--lc:#3b6ea5}
+pre.code.lang-dockerfile,pre.code.lang-docker{--lc:#0b7285}
+pre.code.lang-json,pre.code.lang-toml,pre.code.lang-ini{--lc:#d97706}
+pre.code.lang-hcl,pre.code.lang-terraform,pre.code.lang-tf{--lc:#6b46c1}
+pre.code.lang-javascript,pre.code.lang-js,pre.code.lang-typescript,pre.code.lang-ts{--lc:#b7791f}
+pre.code.lang-go,pre.code.lang-java,pre.code.lang-c,pre.code.lang-cpp,pre.code.lang-rust{--lc:#c05621}
+pre.code.lang-nginx,pre.code.lang-conf,pre.code.lang-xml,pre.code.lang-html{--lc:#9c4221}
+pre.code.lang-text{--lc:#a0aec0;background:#f7f8fa}
+/* tokens the base sheet leaves plain: YAML/HTML keys, attributes, variables, constants, diff lines */
+.hl .nt{color:#0b4f9c;font-weight:600}
+.hl .na{color:#6b2fa0}
+.hl .nv,.hl .vg,.hl .vi,.hl .vc{color:#a14a00}
+.hl .no,.hl .nl{color:#0b7285}
+.hl .l,.hl .ld{color:#22673f}
+.hl .gi{color:#22673f;background:#e6f6ec}
+.hl .gd{color:#a52222;background:#fdeaea}
+.hl .gh,.hl .gu{color:#553099;font-weight:600}
 code{background:var(--accent-t);border-color:color-mix(in srgb, var(--accent) 14%, #fff)}
 pre.code code{background:none;border:0}
 
