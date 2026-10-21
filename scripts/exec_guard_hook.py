@@ -2,26 +2,31 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""PreToolUse hook for Bash|PowerShell: enforce the execution policy while a notes run's guard is active.
+"""PreToolUse hook for Bash|PowerShell: gate commands while a notes run's guard is active.
 
-stdin  = hook JSON ({"tool_name": ..., "tool_input": {"command": ...}, "cwd": ...})
-exit 2 = blocked (message on stderr); exit 0 = allowed.
-No active guard: always allowed (the policy never touches ordinary work outside a notes run).
-Active guard: FAIL-CLOSED. A policy error blocks the command, because an unchecked command during a run
-could reach the student's cloud account. Errors are logged to <data>/exec-guard-errors.log.
-Rules: scripts/notes_lib/exec_policy.py; prose for agents: reference/execution-policy.md.
+stdin  = hook JSON ({"tool_input": {"command": ...}, "cwd", "agent_id", "agent_type", ...})
+exit 2 = blocked (reason on stderr); exit 0 = no objection (Claude Code's normal permission flow applies).
+
+    no active guard, or inside the classifier itself   -> allow (ordinary work is never touched)
+    floor (credentials, wsl, sudo, tampering)          -> block, for every caller during a run
+    caller is not a notes:* agent                      -> allow (the orchestrator runs plugin scripts)
+    fast path (read-only, plugin scripts)              -> allow
+    otherwise                                          -> LLM classifier (exec_classifier): allow, deny,
+                                                          or "run exactly this instead"; approvals are
+                                                          recorded with their cleanup plan for exec_cleanup
+FAIL-CLOSED while a run is guarded: an internal error blocks the command and is logged.
 """
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
 
-_HINT = ("Notes are written from the transcript, instructor code and docs, not by re-running the class: "
-         "show this command in a fence WITHOUT {run} and give representative output. "
-         "See reference/execution-policy.md.")
+_HINT = ("Show this command in a fence WITHOUT {run} and give representative output from the transcript and "
+         "docs. A block is final: do not retry it in another form. See reference/execution-policy.md.")
 
 
 def _log(data_dir: Path | None, exc: BaseException) -> None:
@@ -35,9 +40,16 @@ def _log(data_dir: Path | None, exc: BaseException) -> None:
         pass
 
 
+def _block(msg: str) -> int:
+    sys.stderr.write(f"notes plugin: blocked during a notes run: {msg}\n")
+    return 2
+
+
 def main() -> int:
     data_dir = None
     try:
+        if os.environ.get("NOTES_EXEC_CLASSIFIER"):
+            return 0
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from notes_lib import guard, platform as plat
 
@@ -45,7 +57,8 @@ def main() -> int:
         raw = sys.stdin.read()
         evt = json.loads(raw) if raw.strip() else {}
         cmd = (evt.get("tool_input") or {}).get("command")
-        if not isinstance(cmd, str) or not guard.load_guard(data_dir):
+        g = guard.load_guard(data_dir) if isinstance(cmd, str) else None
+        if not g:
             return 0
     except BaseException as e:  # noqa: BLE001  (no readable event or guard: nothing to enforce)
         if isinstance(e, SystemExit):
@@ -53,18 +66,26 @@ def main() -> int:
         _log(data_dir, e)
         return 0
     try:
-        from notes_lib import exec_policy
+        from notes_lib import exec_classifier as ec, exec_policy as ep
 
-        reason = exec_policy.classify(cmd, cwd=evt.get("cwd"))
+        why = ep.floor(cmd)
+        if why:
+            return _block(f"{why}. {_HINT}")
+        if not str(evt.get("agent_type") or "").startswith("notes:") or ep.fast_allow(cmd):
+            return 0
+        item = {"id": "1", "kind": "command", "text": cmd, "cwd": evt.get("cwd")}
+        v = ec.judge([item], {"run_id": g.get("run_id", ""), "agent_type": evt.get("agent_type")})["1"]
+        if v["decision"] == "allow":
+            ec.record(g.get("run_id", ""), evt.get("agent_id", ""), item, v)
+            return 0
+        if v["decision"] == "rewrite" and v.get("command") and v["command"] != cmd and not ep.floor(v["command"]):
+            return _block(f"{v['reason']} Run exactly this instead (it is pre-approved):\n{v['command']}")
+        return _block(f"{v['reason']}. {_HINT}")
     except BaseException as e:  # noqa: BLE001  (fail-closed while a run is guarded)
         if isinstance(e, SystemExit):
             raise
         _log(data_dir, e)
-        reason = f"the execution policy could not check this command ({type(e).__name__})"
-    if reason:
-        sys.stderr.write(f"notes plugin: blocked during a notes run: {reason}. {_HINT}\n")
-        return 2
-    return 0
+        return _block(f"the execution policy could not check this command ({type(e).__name__}). {_HINT}")
 
 
 if __name__ == "__main__":

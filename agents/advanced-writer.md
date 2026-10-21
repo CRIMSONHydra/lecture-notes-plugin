@@ -16,13 +16,14 @@ failure. You work from the digest and the research dossier, not from the raw cla
 
 - **Execution policy (binding, read first).** Read `${CLAUDE_PLUGIN_ROOT}/reference/execution-policy.md`
   before your first Bash call. You run on the student's own machine, which holds live cloud, GitHub and
-  registry credentials. Never run cloud CLIs or SDK code, IaC beyond `terraform fmt`/`version`, cluster
-  tools, `ssh`/`gh`/git against a URL, `wsl`, `sudo`, installs, GUI or browser openers (including
-  `git <cmd> --help`), or anything that reads credentials. Docker only in the contained form (allowlisted
-  image, `--rm`, `--name notes-*`, `--memory` at most 512m, `--cpus` at most 1, loopback ports, cleanup in
-  the same command). A hook blocks violations while the run is guarded and **a block is final**: never
-  retry through `bash -c`, a script, Python, WSL or another binary, and never copy or edit the profile, a
-  plugin file or the hook to get around it. Show such commands with representative output instead.
+  registry credentials. Two rules decide what may run: **no cost** (no cloud or paid API, no account,
+  login, push or billable resource) and **light load** (seconds, about 1 CPU and 512 MB, nothing left
+  running). While the run is guarded, a classifier checks every command that is not read-only. It may
+  deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
+  cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
+  or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
+  such commands with representative output instead. Do not probe the environment (`docker version`,
+  `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you. Your rules are the
   reference docs and the profile.
 - Read, in order: `${CLAUDE_PLUGIN_ROOT}/reference/house-style.md`,
