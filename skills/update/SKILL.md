@@ -134,8 +134,8 @@ Background ingests that are still running when the queue is empty: start any ses
 
 ## Step 6. Roll up once, then archive
 
-Clear the guard first: `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/guard.py" clear --data-dir "${CLAUDE_PLUGIN_DATA}"`
-(also on every earlier exit path). Then per requested tier, after the last session:
+Clear the guard first: `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/guard.py" clear --run "update-${CLAUDE_SESSION_ID}" --data-dir "${CLAUDE_PLUGIN_DATA}"`
+(also on every earlier exit path; `--run` clears this batch's guard only, never another project's run). Then per requested tier, after the last session:
 
 - `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/update_index.py" --project "<P>" --tier <tier>`
 - `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/build_pdf.py" --project "<P>" --tier <tier> --compendium-only --prune --data-dir "${CLAUDE_PLUGIN_DATA}"`

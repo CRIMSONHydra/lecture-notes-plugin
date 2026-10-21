@@ -6,7 +6,8 @@
 
 Runs the cleanup plans the classifier recorded for this agent (exec_cleanup), then sweeps Docker objects
 labelled with the run id. It never blocks the stop: it removes leftovers itself and logs what it did to
-<data>/exec-ledger/<run>.cleanup.log. No active guard: nothing to do.
+<data>/exec-ledger/<run>.cleanup.log. The run is the one whose guard gated the agent (same session, else the
+guarded project the agent worked in, as in exec_guard_hook). No such guard: nothing to do.
 """
 from __future__ import annotations
 
@@ -26,9 +27,13 @@ def main() -> int:
 
         raw = sys.stdin.read()
         evt = json.loads(raw) if raw.strip() else {}
-        g = guard.load_guard(plat.default_data_dir())
-        if not g or not str(evt.get("agent_type") or "").startswith("notes:"):
+        if not str(evt.get("agent_type") or "").startswith("notes:"):
             return 0
+        guards = guard.load_guards(plat.default_data_dir())
+        mine = guard.owned_by_session(guards, evt.get("session_id")) or guard.covering(guards, evt.get("cwd"))
+        if not mine:
+            return 0
+        g = mine[0]
         from notes_lib import layout
         try:
             project = str(layout.find_project(start=evt.get("cwd")))

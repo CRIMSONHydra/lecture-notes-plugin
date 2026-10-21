@@ -391,7 +391,7 @@ fnm or npm, or at `LECTURE_NOTES_CLAUDE`.
 | "Chrome not found" | `/notes:doctor install-chromium`, or set `LECTURE_NOTES_CHROME` |
 | Audit reports Type 3 fonts | A font fell back to a bitmap-style face; check the font stack and re-run `/notes:build` |
 | Offline and a note needs KaTeX/Mermaid | Build once online; assets are cached under `<data dir>/cache/assets` |
-| Writes blocked: "notes guard: ... is inside protected ..." | A crashed run left the guard on (expires after 6 h): `/notes:doctor clear-guard` |
+| Writes blocked: "notes guard: ... is inside protected ..." | A crashed run left its guard on (expires after 6 h): `/notes:doctor clear-guard` (name the run, `/notes:doctor clear-guard <run id>`, when several runs are guarded; each run has its own guard, so concurrent runs in other projects are unaffected) |
 | GitHub 403/429 fetching instructor code | Set `GITHUB_TOKEN`; the script falls back to a sparse git clone |
 | Files are ignored | They are outside `resources/`: `/notes:scan` lists them, `/notes:scan --fix-layout --confirm` moves them |
 | A note is regenerated only because the file was re-checked out on another OS | It is not: hashes ignore CRLF/LF and a BOM; ledgers from before that are upgraded silently |

@@ -47,13 +47,13 @@ def main() -> int:
         if not target:
             return 0
         data_dir = plat.default_data_dir()
-        g = guard.load_guard(data_dir)
-        if not g:
+        guards = guard.load_guards(data_dir)
+        if not guards:
             return 0
         p = Path(os.path.expanduser(str(target)))
         if not p.is_absolute() and evt.get("cwd"):
             p = Path(evt["cwd"]) / p
-        msg = guard.check_path(p, g)
+        msg = guard.check_all(p, guards)                        # every run's protected roots, whoever writes
         if msg:
             sys.stderr.write(msg + "\n")
             return 2
