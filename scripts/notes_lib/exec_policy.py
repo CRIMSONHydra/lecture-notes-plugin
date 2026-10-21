@@ -4,9 +4,10 @@ Judgement lives in ``exec_classifier`` (an LLM decides whether a command is free
 machine). This module holds only what must never depend on a model:
 
 * ``floor(cmd)``: a short list that no classifier verdict can override. It covers reading credentials or
-  tokens, ``wsl``, privilege escalation, encoded PowerShell, and tampering with the policy itself. These
-  guard against prompt injection: an agent that read a hostile transcript or web page can be talked into a
-  command, and the classifier can be talked into approving it.
+  tokens, privilege escalation, encoded PowerShell, environment dumps, and tampering with the policy
+  itself. These guard against prompt injection: an agent that read a hostile transcript or web page can be
+  talked into a command, and the classifier can be talked into approving it. ``wsl …`` and ``sh -c …`` are
+  unwrapped, so the command they carry is what gets checked.
 * ``fast_allow(cmd)``: read-only commands and the plugin's own scripts. They pass instantly, so the
   classifier is only asked about commands that can change something.
 * ``sandbox_env()``: the environment ``{run}`` snippets execute in (no credentials, git limited to local repos).
@@ -26,9 +27,7 @@ _WRAPPERS = {"env", "time", "exec", "nohup", "command", "builtin", "nice", "stdb
              "then", "do", "else", "if", "while", "until", "!", "{", "(", "timeout"}
 _SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "pwsh", "powershell", "cmd"}
 
-_FLOOR_WORDS = {"wsl": "WSL runs commands inside a Linux VM, outside every check",
-                "wslconfig": "WSL runs commands inside a Linux VM, outside every check",
-                "sudo": "privilege escalation", "su": "privilege escalation", "runas": "privilege escalation",
+_FLOOR_WORDS = {"sudo": "privilege escalation", "su": "privilege escalation", "runas": "privilege escalation",
                 "doas": "privilege escalation", "pkexec": "privilege escalation",
                 "printenv": "an environment dump prints tokens"}
 _CRED = re.compile(
@@ -86,6 +85,27 @@ def strip_heredocs(text: str) -> str:
     return "\n".join(out)
 
 
+_WSL_VAL = {"-d", "--distribution", "-u", "--user", "--cd", "--distribution-id", "--shell-type"}
+
+
+def _wsl_inner(args: list[str]) -> list[str]:
+    """The Linux command a ``wsl`` invocation runs, or [] for management calls (``--shutdown``, ``-l``)."""
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--":
+            return args[i + 1:]
+        if a in _WSL_VAL:
+            i += 2
+        elif a in ("-e", "--exec", "--system", "~"):
+            i += 1
+        elif a.startswith("-"):
+            return []
+        else:
+            return args[i:]
+    return []
+
+
 def _command_words(cmd: str) -> list[list[str]]:
     """Each simple command as a word list, wrappers and VAR=x prefixes removed; ``sh -c '…'`` is unfolded."""
     out: list[list[str]] = []
@@ -96,12 +116,18 @@ def _command_words(cmd: str) -> list[list[str]]:
             words = words[1:]
         if not words:
             continue
+        if _norm(words[0]) == "wsl":
+            inner = _wsl_inner(words[1:])
+            if inner:                          # judge what runs inside Linux, not the launcher
+                out += _command_words(shlex.join(inner))
+                continue
         out.append(words)
-        if _norm(words[0]) in _SHELLS:
-            low = [w.lower() for w in words]
-            for flag in ("-c", "-command", "/c", "/k"):
-                if flag in low and low.index(flag) + 1 < len(words):
-                    out += _command_words(" ".join(words[low.index(flag) + 1:]))
+        if _norm(words[0]) in _SHELLS:          # -c, combined POSIX flags (-lc, -ec), -Command, /c, /k
+            for j, w in enumerate(words[1:], 1):
+                if w.lower() in ("-command", "/c", "/k") or re.fullmatch(r"-[a-z]*c[a-z]*", w):
+                    if j + 1 < len(words):
+                        out += _command_words(" ".join(words[j + 1:]))
+                    break
     return out
 
 

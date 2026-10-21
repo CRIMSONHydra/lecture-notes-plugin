@@ -73,8 +73,16 @@ def main() -> int:
             return _block(f"{why}. {_HINT}")
         if not str(evt.get("agent_type") or "").startswith("notes:") or ep.fast_allow(cmd):
             return 0
+        from notes_lib import layout, platform as plat
+        try:
+            project = layout.find_project(start=evt.get("cwd"))
+        except Exception:  # noqa: BLE001  (no project: no course resources to name)
+            project = None
+        shell = "powershell" if evt.get("tool_name") == "PowerShell" else (
+            "bash (Git Bash on Windows)" if plat.os_kind() == "windows" else "bash")
         item = {"id": "1", "kind": "command", "text": cmd, "cwd": evt.get("cwd")}
-        v = ec.judge([item], {"run_id": g.get("run_id", ""), "agent_type": evt.get("agent_type")})["1"]
+        v = ec.judge([item], {"run_id": g.get("run_id", ""), "agent_type": evt.get("agent_type"), "shell": shell,
+                              "course_resources": ec.course_resources(project)})["1"]
         if v["decision"] == "allow":
             ec.record(g.get("run_id", ""), evt.get("agent_id", ""), item, v)
             return 0

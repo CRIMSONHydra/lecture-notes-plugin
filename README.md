@@ -348,16 +348,19 @@ credentials. For a subject like DevOps, "run the snippet to capture real output"
 run is judged against two rules, **no cost** and **light load**
 ([`reference/execution-policy.md`](reference/execution-policy.md)):
 
-- **Floor (code).** Credential and token reads, `wsl`, `sudo`, encoded PowerShell, environment dumps and
-  tampering with the plugin's controls are always blocked.
-- **Fast path (code).** Read-only commands and the plugin's own scripts pass instantly.
+- **Floor (code).** Credential and token reads, `sudo`, encoded PowerShell, environment dumps and
+  tampering with the plugin's controls are always blocked, also when wrapped in `wsl …` or `bash -c …`.
+- **Fast path (code).** Read-only commands (also inside `wsl`) and the plugin's own scripts pass instantly.
+- **Course material and toolchain.** Read-only `gh` and anonymous downloads of the repos the course
+  references are allowed. The classifier knows how tools resolve on this machine (Python behind uv, Node
+  behind fnm, `gh` only in WSL, Git Bash path rewriting), and rewrites commands to the form that works.
 - **Classifier (Claude Haiku via `claude -p`).** Everything else from a `notes:*` agent, and every `{run}`
   snippet, is judged by the model: allow, deny, or "run exactly this instead" (for example, a `docker run`
   rewritten with `--rm`, a `notes-` name, 256 MB and half a CPU). Verdicts are cached. Calls run with no tools,
   no settings and a $0.10 cap. If the classifier is unavailable, the answer is deny.
-- **Cleanup.** Each approval records what it creates and how to remove it. A `SubagentStop` hook runs those
-  removals, accepting only plain removals of `notes-*` objects or temp paths, then sweeps labelled Docker
-  objects. `guard.py clear` sweeps the whole run.
+- **Cleanup.** Each approval records what it creates and how to remove it. A `SubagentStop` hook carries out
+  those removals: only `notes-*` Docker objects and temp or work paths, in Python, on any OS (inside WSL for
+  things created there). Then it sweeps labelled Docker objects. `guard.py clear` sweeps the whole run.
 - **Snippets** run with credentials stripped, git confined to local repos, and Git Bash, never the WSL
   launcher, as `bash` on Windows.
 
