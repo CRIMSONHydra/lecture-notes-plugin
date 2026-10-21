@@ -11,7 +11,8 @@ are carried out:
   student's own ``notes-db`` is never touched; flags in the plan are dropped, never executed.
 * file or directory removals (``rm``, ``rmdir``, ``Remove-Item``, ``del``, ``rd``) of paths inside a temp
   directory whose top-level entry is named ``notes-*``, never inside a notes project (notes, PDFs and work
-  files are the job's output), and only when the path was created at or after the command was approved.
+  files are the job's output), and only when the path came into being during this run (not before its first
+  approval; see ``_created_after`` for why not "after the command's own approval").
   Done in Python, so it works on every OS; Git Bash paths (``/tmp/…``, ``/c/…``), WSL mounts (``/mnt/c/…``)
   and ``$env:TEMP`` are mapped; read-only files (a clone's ``.git/objects``) are made writable first.
 
@@ -205,13 +206,18 @@ def _run(argv: list[str], timeout: int = 60) -> tuple[int, str]:
 
 
 def _created_after(p: Path, since: float) -> bool:
-    """Whether ``p`` came into being at or after ``since`` (creation time where the OS has it, else mtime)."""
+    """Whether ``p`` came into being at or after ``since`` (creation time where the OS has it, else mtime).
+
+    ``since`` is the start of the run, not the approval of one command: NTFS gives a directory re-created
+    under a name deleted within the last 15 s its *old* timestamps ("tunneling"), so a name a run re-uses
+    (snippet scratch dirs) would look older than its latest approval. The first creation in a run is still
+    inside the run."""
     try:
         st = p.lstat()
     except OSError:
         return False
     born = getattr(st, "st_birthtime", None) or (st.st_ctime if os.name == "nt" else st.st_mtime)
-    return max(born, st.st_mtime) >= math.floor(since)        # same second as the approval counts (1 s filesystems)
+    return max(born, st.st_mtime) >= math.floor(since) - 1    # a second of slack for 1 s filesystems
 
 
 def _rmtree(p: Path) -> None:
@@ -235,7 +241,7 @@ def _remove(paths: list[Path], roots: list[Path], since: float) -> tuple[str, st
             if not (x.exists() or x.is_symlink()):
                 continue
             if not _created_after(x, since):
-                skipped.append(f"{x}: existed before the command was approved")
+                skipped.append(f"{x}: existed before this run started")
                 continue
             try:
                 if x.is_dir() and not x.is_symlink():
@@ -316,6 +322,8 @@ def cleanup(run_id: str, agent_id: str | None = None, project: str | None = None
     done = {(d.get("row"), d.get("cmd")) for r in rows for d in [r.get("cleanup_done")]
             if isinstance(d, dict) and d.get("status") in ("ok", "nothing", "skipped")}
     roots = _roots(project)
+    approvals = [float(r["t"]) for r in rows if "t" in r and "cleanup_cmd" not in r and "cleanup_done" not in r]
+    run_start = min(approvals) if approvals else 0.0           # nothing older than the run is ever a leftover
     report, log, used_docker = [], [], False
     for r in rows:
         if "cleanup_cmd" in r or "cleanup_done" in r or (agent_id and r.get("agent") != agent_id):
@@ -331,7 +339,7 @@ def cleanup(run_id: str, agent_id: str | None = None, project: str | None = None
             if how is None:
                 status, out = "skipped", "not a plain removal of this run's own notes-* objects"
             elif how[0] == "remove":
-                status, out = _remove(how[1], roots, approved)
+                status, out = _remove(how[1], roots, run_start)
             elif how[0] == "wsl_rm":
                 code, out = _run(["wsl"] + (["-d", how[1]] if how[1] else []) + ["--", "rm", "-rf", *how[2]])
                 status = "ok" if code == 0 else "failed"

@@ -6,6 +6,7 @@ denied; `docker run` without --rm is rewritten; `mktemp-notes` creates a temp di
 everything else is allowed.
 """
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -22,7 +23,7 @@ for it in req["items"]:
                  command=t.replace("docker run", "docker run --rm --name notes-web -m 256m --cpus 0.5", 1),
                  creates=["container notes-web"], cleanup=["docker rm -f notes-web"])
     elif "mktemp-notes" in t:
-        d = Path(tempfile.gettempdir()) / "notes-selftest-leftover"
+        d = Path(os.environ.get("NOTES_TEST_LEFTOVER") or (Path(tempfile.gettempdir()) / "notes-selftest-leftover"))
         v.update(creates=[str(d)], cleanup=[f"rm -rf {d.as_posix()}"])
     out.append(v)
 print(json.dumps({"type": "result", "subtype": "success", "structured_output": {"verdicts": out}}))
