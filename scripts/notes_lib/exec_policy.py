@@ -203,7 +203,10 @@ def sandbox_env(base: dict[str, str] | None, scratch: Path) -> dict[str, str]:
     env = {k: v for k, v in (base if base is not None else os.environ).items()
            if not k.upper().startswith(_STRIP_PREFIXES) and "TOKEN" not in k.upper() and "SECRET" not in k.upper()}
     empty = scratch / ".no-credentials"
+    tmp = scratch / ".tmp"                               # mktemp and friends stay inside the snippet's scratch dir
+    tmp.mkdir(parents=True, exist_ok=True)
     env.update({
+        "TMPDIR": str(tmp), "TMP": str(tmp), "TEMP": str(tmp),
         "AWS_CONFIG_FILE": os.devnull, "AWS_SHARED_CREDENTIALS_FILE": os.devnull,
         "AWS_EC2_METADATA_DISABLED": "true", "KUBECONFIG": os.devnull,
         "CLOUDSDK_CONFIG": str(empty / "gcloud"), "AZURE_CONFIG_DIR": str(empty / "azure"),
