@@ -39,6 +39,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -143,7 +144,7 @@ def classify(snippets: list[dict], stem: str) -> dict:
     """Verdict per snippet ``k``: the floor first, then one classifier call for the rest (cached)."""
     out, items = {}, []
     for sn in snippets:
-        why = exec_policy.floor(sn["code"])
+        why = exec_policy.floor(sn["code"], sandboxed=True)     # token variables are stripped from the sandbox
         if why:
             out[sn["k"]] = {"decision": "deny", "reason": why, "cleanup": []}
         else:
@@ -158,9 +159,8 @@ def classify(snippets: list[dict], stem: str) -> dict:
 def check_one(sn: dict, snipdir: Path, table: dict, timeout: float, verdict: dict | None = None) -> dict:
     res = {"k": sn["k"], "line": sn["line"], "lang": sn["lang"], "mode": sn["mode"],
            "status": "pass", "reason": "", "exit_code": None, "expected": None, "actual": None}
-    blocked = (verdict or {}).get("reason") if (verdict or {}).get("decision") != "allow" else None
-    if verdict is None or blocked:
-        blocked = blocked or "no classifier verdict"
+    if verdict is None or verdict.get("decision") != "allow":          # anything but an explicit allow fails
+        blocked = (verdict or {}).get("reason") or "no classifier verdict"
         res.update(status="fail", reason=f"execution policy: {blocked}; drop {{{sn['mode'].split('-')[0]}}} "
                                          "and show representative output")
         return res
@@ -197,32 +197,71 @@ def check_one(sn: dict, snipdir: Path, table: dict, timeout: float, verdict: dic
     env = exec_policy.sandbox_env(None, snipdir)
     for what, argv in cmds:
         try:
-            r = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, stdin=subprocess.DEVNULL,
-                               timeout=max(timeout * 3, 30) if what == "compile" else timeout)
+            code, out, err, merged = run_capture(argv, cwd, env, max(timeout * 3, 30) if what == "compile" else timeout)
         except subprocess.TimeoutExpired:
             res.update(status="fail", reason=f"{what} timed out")
             return res
         except OSError as e:
             res.update(status="skipped", reason=f"cannot execute `{argv[0]}`: {e}")
             return res
-        out = r.stdout.decode("utf-8", "replace")
-        err = r.stderr.decode("utf-8", "replace")
         if what == "compile":
-            if r.returncode != 0:
+            if code != 0:
                 res.update(status="fail", reason="compile error:\n" + tail(err or out))
                 return res
             continue
-        res["exit_code"] = r.returncode
-        res["actual"] = normalise(out)
+        res["exit_code"] = code
+        res["actual"] = normalise(merged)
         if sn["mode"] == "run":
             if sn["expected"] is None:
                 res.update(status="fail", reason="{run} fence has no ```text output block within 2 lines")
                 return res
             want = normalise(sn["expected"])
             res["expected"] = want
-            if res["actual"] != want and normalise(out + err) != want:
+            # the expected block is what a terminal shows: both streams in the order they were written;
+            # stdout alone and the two streams one after the other are accepted too
+            if want not in (res["actual"], normalise(out), normalise(out + err), normalise(err + out)):
                 res.update(status="fail", reason="output mismatch")
     return res
+
+
+def run_capture(argv: list[str], cwd: str, env: dict, timeout: float) -> tuple[int, str, str, str]:
+    """Run ``argv`` and return ``(exit code, stdout, stderr, merged)``. ``merged`` is the two streams in the
+    order the process wrote them, as a terminal would show them; a plain ``capture_output`` loses that order.
+    The order is as seen by two pipe readers: writes closer together than about a millisecond (two prints in a
+    row from one process) may come out stream by stream, which is why the caller also accepts stdout alone and
+    the two streams one after the other."""
+    import threading
+
+    chunks: list[tuple[float, str, bytes]] = []
+    lock = threading.Lock()
+
+    def pump(stream, name):
+        fd = stream.fileno()
+        while True:
+            data = os.read(fd, 65536)
+            if not data:
+                break
+            with lock:
+                chunks.append((time.monotonic(), name, data))
+
+    proc = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    threads = [threading.Thread(target=pump, args=(proc.stdout, "out"), daemon=True),
+               threading.Thread(target=pump, args=(proc.stderr, "err"), daemon=True)]
+    for t in threads:
+        t.start()
+    try:
+        code = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        raise
+    for t in threads:
+        t.join(timeout=5)
+    chunks.sort(key=lambda c: c[0])
+    dec = lambda parts: b"".join(parts).decode("utf-8", "replace")  # noqa: E731
+    return (code, dec(d for _, n, d in chunks if n == "out"), dec(d for _, n, d in chunks if n == "err"),
+            dec(d for _, _, d in chunks))
 
 
 def main(argv=None) -> int:
