@@ -26,7 +26,7 @@ from pathlib import Path
 
 from . import platform as plat, toolchain
 
-POLICY_VERSION = "5"                                           # bump to invalidate cached verdicts
+POLICY_VERSION = "6"                                           # bump to invalidate cached verdicts
 # Pinned: older CLIs resolve the `haiku` alias to Haiku 4.5 (they warn "unrecognized_model" on stderr for a
 # newer id but still use it).
 MODEL = "claude-haiku-5-5"
@@ -62,7 +62,12 @@ Never rewrite to something with a different purpose. Snippets (kind "snippet") m
 
 DENY: terraform/tofu init|plan|apply|destroy|import, any cloud CLI or SDK call (aws, az, gcloud, eksctl, boto3...), kubectl/helm/minikube/kind against any cluster, ssh/scp to other hosts, docker login/push/compose/prune/system, removing objects this job did not create, package installs, privilege escalation, credential or token access, curl/wget/Invoke-WebRequest that send data or credentials, anything you cannot fully understand (obfuscated, encoded, downloads piped to a shell), and anything else that fails a rule.
 
-For every allow or rewrite, list in "creates" what will exist afterwards (containers, images, volumes, networks, files or directories outside the snippet dir) and in "cleanup" the exact commands that remove exactly those, written for context.shell (e.g. `docker rm -f notes-web`, `docker rmi notes-app:1`, `rm -rf /tmp/notes-x`, `Remove-Item -Recurse -Force $env:TEMP/notes-x`); prefix a cleanup with `wsl` when the thing was created inside WSL. Use [] when nothing remains. Keep "reason" to one sentence naming the rule."""
+LEFTOVERS ARE NOT OUTPUT: the job's own output lives inside the notes project (notes/, pdf/, \
+.notes-plugin-internal/ including work/meta and work/build) and inside the snippet sandbox. Files an agent writes \
+there are deliverables: never list them in "creates" and never plan to delete them. Never plan to delete \
+anything that existed before the command ran.
+
+For every allow or rewrite, list in "creates" what will exist afterwards OUTSIDE the project and the sandbox (containers, images, volumes, networks, files or directories outside the snippet dir) and in "cleanup" the exact commands that remove exactly those, written for context.shell (e.g. `docker rm -f notes-web`, `docker rmi notes-app:1`, `rm -rf /tmp/notes-x`, `Remove-Item -Recurse -Force $env:TEMP/notes-x`); prefix a cleanup with `wsl` when the thing was created inside WSL. Use [] when nothing remains. Keep "reason" to one sentence naming the rule."""
 
 SCHEMA = {
     "type": "object",

@@ -7,9 +7,13 @@ output, so it is parsed, never handed to a shell, and only two kinds are carried
 
 * Docker removals (``docker rm/rmi/stop/kill``, ``docker container|image|volume|network rm``) of objects
   named ``notes-*``;
-* file or directory removals (``rm``, ``rmdir``, ``Remove-Item``, ``del``) of paths inside the temp
-  directory or the project's work directory. These are done in Python, so they work on every OS. Git Bash
-  paths (``/tmp/…``, ``/c/…``) and WSL mounts (``/mnt/c/…``) are mapped to real paths.
+* file or directory removals (``rm``, ``rmdir``, ``Remove-Item``, ``del``) of paths inside the system temp
+  directory, never inside a notes project (notes, PDFs and work files are the job's output). These are done in
+  Python, so they work on every OS. Git Bash paths (``/tmp/…``, ``/c/…``) and WSL mounts (``/mnt/c/…``) are
+  mapped to real paths.
+
+``prefilter`` runs when a command is approved, before it executes: a removal of anything that already exists
+is dropped then, because the command cannot have created it.
 
 A plan for something created inside WSL (``wsl …`` prefix, or a command that ran through ``wsl``) runs
 through ``wsl`` and may only touch ``/tmp/…`` there. Docker is used only when the ledger shows Docker was
@@ -56,6 +60,15 @@ def _inside(p: Path, roots: list[Path]) -> bool:
     return any(rp != r and rp.is_relative_to(r) for r in roots)
 
 
+def _in_notes_project(p: Path) -> bool:
+    """True for anything inside a notes project: notes, PDFs and work files are the job's output, never leftovers."""
+    try:
+        rp = p.resolve()
+    except (OSError, ValueError):
+        return True
+    return any((d / ".notes-plugin-internal").is_dir() for d in (rp, *rp.parents))
+
+
 def plan(cmd: str, roots: list[Path], via_wsl: bool = False) -> tuple[str, list] | None:
     """How to carry out one cleanup command safely, or None when it is not a plain removal."""
     if ep.floor(cmd) or re.search(r"[;&|`<>]|\$\(", cmd):
@@ -85,8 +98,23 @@ def plan(cmd: str, roots: list[Path], via_wsl: bool = False) -> tuple[str, list]
             ok = all(re.fullmatch(r"/tmp/[\w.-][\w./-]*", p) and ".." not in p for p in paths)
             return ("argv", ["wsl", "--", "rm", "-rf", *paths]) if ok else None
         hp = [_host_path(p) for p in paths]
-        return ("remove", hp) if all(_inside(p, roots) for p in hp) else None
+        return ("remove", hp) if all(_inside(p, roots) and not _in_notes_project(p) for p in hp) else None
     return None
+
+
+def prefilter(cleanups: list[str]) -> list[str]:
+    """Called at approval time, BEFORE the command runs: keep only plans that remove something which does not
+    exist yet (the command will create it). A path that already exists predates the command and is never
+    the command's leftover, so its removal is dropped here and can never run later."""
+    keep = []
+    for cmd in cleanups or []:
+        how = plan(cmd, _roots(None))
+        if how is None:
+            continue
+        if how[0] == "remove" and any(p.exists() or p.is_symlink() for p in how[1]):
+            continue
+        keep.append(cmd)
+    return keep
 
 
 def safe_cleanup(cmd: str, roots: list[Path]) -> bool:
@@ -94,11 +122,10 @@ def safe_cleanup(cmd: str, roots: list[Path]) -> bool:
     return plan(cmd, roots) is not None
 
 
-def _roots(project: str | None) -> list[Path]:
-    roots = [Path(tempfile.gettempdir()).resolve()]
-    if project:
-        roots.append((Path(project) / ".notes-plugin-internal" / "work").resolve())
-    return roots
+def _roots(project: str | None = None) -> list[Path]:
+    """Where a cleanup may remove files: the system temp directory only (``project`` is kept for callers;
+    nothing inside a notes project is ever removed)."""
+    return [Path(tempfile.gettempdir()).resolve()]
 
 
 def _run(argv: list[str], timeout: int = 60) -> tuple[int, str]:

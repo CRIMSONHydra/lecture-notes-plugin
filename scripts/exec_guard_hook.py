@@ -84,6 +84,8 @@ def main() -> int:
         v = ec.judge([item], {"run_id": g.get("run_id", ""), "agent_type": evt.get("agent_type"), "shell": shell,
                               "course_resources": ec.course_resources(project)})["1"]
         if v["decision"] == "allow":
+            from notes_lib import exec_cleanup
+            v = dict(v, cleanup=exec_cleanup.prefilter(v.get("cleanup") or []))   # never what already exists
             ec.record(g.get("run_id", ""), evt.get("agent_id", ""), item, v)
             return 0
         if v["decision"] == "rewrite" and v.get("command") and v["command"] != cmd and not ep.floor(v["command"]):
