@@ -40,14 +40,15 @@ _INTERNAL_DISTROS = re.compile(r"^(docker-desktop(-data)?|rancher-desktop(-data)
 
 def _agent_path() -> str:
     """PATH without the directories of the Python environment running this code (uv's script env)."""
-    own = {Path(sys.prefix).resolve(), Path(sys.executable).resolve().parent}
+    # unresolved on purpose: a venv's python is a symlink to the system interpreter on Linux, and resolving
+    # it would remove /usr/bin from the probe
+    own = {Path(sys.prefix), Path(sys.executable).parent}
     keep = []
     for d in os.environ.get("PATH", "").split(os.pathsep):
-        try:
-            rd = Path(d).resolve()
-        except (OSError, ValueError):
+        if not d:
             continue
-        if d and not any(rd == o or rd.is_relative_to(o) for o in own) and "environments-v2" not in d:
+        rd = Path(d)
+        if not any(rd == o or rd.is_relative_to(o) for o in own) and "environments-v2" not in d:
             keep.append(d)
     return os.pathsep.join(keep)
 

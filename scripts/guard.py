@@ -70,11 +70,14 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "clear":
         g = guard.load_guard(ddir)
-        if g:                                   # final sweep: undo anything the run's approved commands left
-            from notes_lib import exec_cleanup
-            os.environ["LECTURE_NOTES_DATA"] = str(ddir)
-            for line in exec_cleanup.cleanup(g.get("run_id", "")):
-                print(f"  cleanup {line}")
+        try:
+            if g:                               # final sweep: undo anything the run's approved commands left
+                from notes_lib import exec_cleanup
+                os.environ["LECTURE_NOTES_DATA"] = str(ddir)
+                for line in exec_cleanup.cleanup(g.get("run_id", "")):
+                    print(f"  cleanup {line}")
+        except Exception as e:  # noqa: BLE001  (a cleanup problem must never leave the guard on)
+            print(f"  cleanup skipped: {type(e).__name__}: {e}", file=sys.stderr)
         had = guard.clear_guard(ddir)
         print("guard cleared" if had else "no guard was active")
         return 0

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,11 +34,20 @@ def _iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(timespec="seconds")
 
 
-def set_guard(data_dir, protect, allow, hours: float = 6, run_id: str = "") -> Path:
-    """Activate the guard. Returns the path of ``<data>/guard.json``."""
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+
+
+def set_guard(data_dir, protect, allow, hours: float = 6, run_id: str = "", session_id: str = "") -> Path:
+    """Activate the guard. Returns the path of ``<data>/guard.json``.
+
+    ``session_id`` is the Claude Code session that owns the run. The skills put it in the run id
+    (``update-<session>``, ``<profile>-<nn>-<session>``), so it is read from there when not given; the
+    execution hook uses it to leave other sessions' commands alone."""
     now = time.time()
+    m = _UUID.search(run_id or "")
     doc = {
         "run_id": run_id or "",
+        "session_id": (session_id or (m.group(0) if m else "")).lower(),
         "created": _iso(now),
         "expires": _iso(now + float(hours) * 3600),
         "expires_epoch": now + float(hours) * 3600,
@@ -46,7 +56,9 @@ def set_guard(data_dir, protect, allow, hours: float = 6, run_id: str = "") -> P
     }
     f = _file(data_dir)
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps(doc, indent=2), encoding="utf-8", newline="\n")
+    tmp = f.with_name(f"guard.{os.getpid()}.tmp")               # atomic: a half-written guard would read as "none"
+    tmp.write_text(json.dumps(doc, indent=2), encoding="utf-8", newline="\n")
+    os.replace(tmp, f)
     return f
 
 

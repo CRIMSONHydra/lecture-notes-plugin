@@ -210,7 +210,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--code-bd);border-left:2
 pre.code.long{break-inside:auto;orphans:3;widows:3}
 pre.code code{font:inherit;background:none;border:0;padding:0;white-space:pre}
 code{font-family:@@MONO@@;font-size:8.4pt;background:#eef2f6;border:1px solid #e1e7ee;
-  border-radius:2px;padding:0 .25em}
+  border-radius:2px;padding:0 .2em}
 pre.code.lang-text{border-left-color:#c5cfda;background:#f8f9fa}
 pre.code.lang-bash,pre.code.lang-sh,pre.code.lang-console{border-left-color:#8aa08b}
 
@@ -246,8 +246,10 @@ ul,ol{margin:.5em 0;padding-left:1.35em}
 li{margin:.2em 0}
 li>p{margin:.2em 0}
 
-code{font-family:@@MONO@@;font-size:.86em;background:#f4f6f8;padding:.08em .3em;border-radius:2.5px;
+code{font-family:@@MONO@@;font-size:.86em;background:#f4f6f8;padding:.08em .2em;border-radius:2.5px;
   border:.4px solid #e3e7ec;white-space:pre-wrap;word-break:break-word}
+/* the side padding of an inline code box is not counted when Chrome breaks a line at it, so it can hang past
+   the margin; keep padding + border under the audit's 3pt slack (at .3em it was 3.2pt) */
 pre.code{font-family:@@MONO@@;background:#f4f6f8;border:.6px solid #e1e6ec;border-left:2.5px solid #b8c6d4;
   border-radius:3px;padding:7px 9px;margin:.7em 0;font-size:8.9px;line-height:1.42;
   overflow:hidden;white-space:pre;break-inside:avoid-page}

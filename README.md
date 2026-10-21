@@ -349,8 +349,11 @@ run is judged against two rules, **no cost** and **light load**
 ([`reference/execution-policy.md`](reference/execution-policy.md)):
 
 - **Floor (code).** Credential and token reads, `sudo`, encoded PowerShell, environment dumps and
-  tampering with the plugin's controls are always blocked, also when wrapped in `wsl …` or `bash -c …`.
-- **Fast path (code).** Read-only commands (also inside `wsl`) and the plugin's own scripts pass instantly.
+  redirecting the plugin's controls through environment variables are always blocked, also when wrapped in
+  `wsl …` or `bash -c …` or hidden behind `VAR=…; $VAR`. The plugin's own agents also may not touch the
+  guard, the hooks, the ledger or the cache.
+- **Fast path (code).** Read-only commands (also inside `wsl`) and the plugin's own scripts, from any
+  installed version of the plugin, pass instantly.
 - **Course material and toolchain.** Read-only `gh` and anonymous downloads of the repos the course
   references are allowed. The classifier knows how tools resolve on this machine (Python behind uv, Node
   behind fnm, `gh` only in WSL, Git Bash path rewriting), and rewrites commands to the form that works.
@@ -358,15 +361,21 @@ run is judged against two rules, **no cost** and **light load**
   snippet, is judged by the model: allow, deny, or "run exactly this instead" (for example, a `docker run`
   rewritten with `--rm`, a `notes-` name, 256 MB and half a CPU). Verdicts are cached. Calls run with no tools,
   no settings and a $0.10 cap. If the classifier is unavailable, the answer is deny.
-- **Cleanup.** Each approval records what it creates and how to remove it. A `SubagentStop` hook carries out
-  those removals: only `notes-*` Docker objects and temp or work paths, in Python, on any OS (inside WSL for
-  things created there). Then it sweeps labelled Docker objects. `guard.py clear` sweeps the whole run.
+- **Cleanup.** Each approval records what it creates and how to remove it; a plan for something that already
+  exists is dropped at approval. A `SubagentStop` hook carries out the rest: only `notes-*` temp entries that
+  appeared after the approval, never anything inside the project, and only Docker objects carrying both the
+  `notes-` name and the run's label. In Python, on any OS; inside the WSL distribution for things created
+  there. Then it sweeps the Docker objects labelled for that agent; `guard.py clear` sweeps the whole run.
+- **Agents cannot switch it off.** Any subagent spawned during a run is gated (not only `notes:*` ones); the
+  Write/Edit hook refuses agent writes under the plugin or its data directory; `guard.py`/`doctor.py` guard
+  controls are blocked for agents; the hook fails closed if the plugin cannot load while a guard file exists.
 - **Snippets** run with credentials stripped, git confined to local repos, and Git Bash, never the WSL
   launcher, as `bash` on Windows.
 
-The hooks act only during a notes run, and the classifier only on the plugin's own agents, so your other
-sessions are unaffected. The floor applies to every caller while a run is active. **Setup:** log in to the
-Claude Code CLI once (`claude`). The plugin finds it on PATH, under fnm or npm, or at `LECTURE_NOTES_CLAUDE`.
+The hooks act only during a notes run and only for the session that started it: the plugin's own agents are
+gated, your own commands in that session are held to the floor, and other Claude Code sessions on the machine
+are untouched. **Setup:** log in to the Claude Code CLI once (`claude`). The plugin finds it on PATH, under
+fnm or npm, or at `LECTURE_NOTES_CLAUDE`.
 
 ## Troubleshooting
 
@@ -375,6 +384,8 @@ Claude Code CLI once (`claude`). The plugin finds it on PATH, under fnm or npm, 
 | "notes plugin: blocked during a notes run: …" | Intended (see Execution policy). Show the command without `{run}` and give representative output. If the run crashed, `/notes:doctor clear-guard` |
 | "classifier unavailable: … is `claude` logged in?" | Run `claude` once and log in, or set `LECTURE_NOTES_CLAUDE` to the CLI path |
 | Snippets time out or "cannot open E:/…" on Windows | `bash` resolved to the WSL launcher (Windows searches System32 before PATH); 1.2.0 runs Git Bash by absolute path (install Git for Windows) |
+| A snippet's output "mismatch" differs only in where a `cp:`/`rm:` error line sits | Fixed in 1.2.3: output is compared as a terminal shows it, stdout and stderr in the order written |
+| `timing.py report` says no timings / a session report has no minutes | Since 1.2.3 stages the agents did not mark are inferred from the files they left behind (shown as `(inferred)`) |
 | Whisper says "no CUDA device visible" | Switch the NVIDIA GPU on (laptops), re-run; or let it use the existing transcript |
 | CUDA DLLs fail to load on Windows | Run `transcribe.py` inside WSL2 Ubuntu |
 | "Chrome not found" | `/notes:doctor install-chromium`, or set `LECTURE_NOTES_CHROME` |
