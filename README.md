@@ -340,10 +340,39 @@ writers costs a fraction of the first run. `--tier basic` skips deep research (v
 Recordings never leave the machine: decode, Whisper and OCR are local. Only text (transcript excerpts, screen
 notes) reaches the model, and web research sends search queries and claim text, not the video.
 
+## Execution policy (what the agents may run)
+
+The agents run on your own machine, which usually holds live cloud, GitHub, registry and cluster
+credentials. For a subject like DevOps, "run the snippet to capture real output" would otherwise mean
+`terraform apply` against your AWS account. Notes are written from the transcript, the instructor code and
+the docs, so while a run's guard is active the plugin enforces
+[`reference/execution-policy.md`](reference/execution-policy.md) in three layers:
+
+- **Hook** (`scripts/exec_guard_hook.py`, on every Bash and PowerShell call). It blocks cloud CLIs and SDK
+  code, Terraform/OpenTofu beyond `fmt`/`version`, Kubernetes tooling, `ssh`/`gh`, and git against a URL
+  unless `GIT_ALLOW_PROTOCOL=file` is set. It also blocks git help pages and credential helpers, `wsl`,
+  `sudo`, installs, GUI and browser openers, credential files and token variables, scanners and load tools,
+  `curl` calls that send data, and pipe-to-shell installers. It looks inside `bash -c`, `pwsh -Command`,
+  script files and `uv run python` scripts. It **fails closed** while the guard is on and does nothing
+  outside a notes run.
+- **Docker** is allowed only in a contained form: allowlisted small images, `--rm`, `--name notes-*`, at
+  most 512 MiB and 1 CPU, loopback-only ports, no bind mounts or host namespaces, cleanup in the same
+  command, and only `notes-*` objects touched.
+- **Snippets** (`check_snippets.py`): a forbidden `{run}` fence fails instead of running. Allowed fences
+  run with credentials stripped (`AWS_*`, `GITHUB_*`, `KUBECONFIG`, … point at nothing), git confined to
+  local repos, and Git Bash, never the WSL launcher, as `bash` on Windows.
+- **Agent prompts:** every Bash-capable agent reads the policy first, treats a block as final and writes
+  representative output instead.
+
+Because the guard is global to the data directory, the hook also applies to your own commands in other
+sessions while a run is in progress. Wait for the run to end, or `/notes:doctor clear-guard` after a crash.
+
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
+| "notes plugin: blocked during a notes run: …" | Intended (see Execution policy). Show the command without `{run}` and give representative output. If the run crashed, `/notes:doctor clear-guard` |
+| Snippets time out or "cannot open E:/…" on Windows | `bash` resolved to the WSL launcher; 1.2.0 uses Git Bash automatically (install Git for Windows) |
 | Whisper says "no CUDA device visible" | Switch the NVIDIA GPU on (laptops), re-run; or let it use the existing transcript |
 | CUDA DLLs fail to load on Windows | Run `transcribe.py` inside WSL2 Ubuntu |
 | "Chrome not found" | `/notes:doctor install-chromium`, or set `LECTURE_NOTES_CHROME` |

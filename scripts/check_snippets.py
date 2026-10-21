@@ -17,6 +17,10 @@ Compile/run command lines come from the profile's ``snippets.<lang>`` table (``e
 (or ``<DIR>/<stem>/`` with --work). In the expected block, lines starting with ``$ `` are commands and are
 dropped; CRLF and trailing spaces are normalised. A non-zero exit status is recorded, not a mismatch.
 A missing toolchain (or no template for the language) is ``skipped`` with a reason, never a failure.
+Execution policy (``notes_lib/exec_policy.py``, ``reference/execution-policy.md``): a fence that would run a
+cloud CLI, IaC, Kubernetes tooling, an uncontained ``docker``, a remote or credential command is never
+executed and FAILS with the reason, so the writer drops its ``{run}``. Allowed snippets run with
+credentials stripped from the environment (cloud, cluster, registry and git configs point at nothing).
 Cache (PLAN 14.1): a PASSING snippet is remembered in ``<work>/cache.json`` keyed by the hash of its
 code, expected output, mode and the profile's compile/run template; an unchanged snippet is never
 recompiled (``cached`` in the JSON, ``CACHE`` in the log). Failures and skips are never cached.
@@ -38,7 +42,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from notes_lib import guard, layout, notefile, platform as plat, profile as prof  # noqa: E402
+from notes_lib import exec_policy, guard, layout, notefile, platform as plat, profile as prof  # noqa: E402
 
 plat.utf8_stdio()
 
@@ -107,9 +111,34 @@ def tail(s: str, n: int = 12) -> str:
     return "\n".join(s.strip().splitlines()[:n])
 
 
+_WSL_LAUNCHER = re.compile(r"[\\/](system32|windowsapps)[\\/](bash|sh|wsl)(\.exe)?$", re.I)
+
+
+def no_wsl(argv: list[str]) -> list[str]:
+    """On Windows a bare ``bash`` can resolve to the WSL launcher, which runs the snippet inside a Linux VM
+    (and cannot open Windows paths). Use Git for Windows' bash instead; raise LookupError if there is none."""
+    if plat.os_kind() != "windows" or Path(argv[0]).stem.lower() not in ("bash", "sh"):
+        return argv
+    found = shutil.which(argv[0]) or argv[0]
+    if not _WSL_LAUNCHER.search(found):
+        return argv
+    git = shutil.which("git")
+    for root in (Path(git).resolve().parents if git else []):    # <Git>\cmd\git.exe or <Git>\mingw64\bin\git.exe
+        for cand in (root / "bin" / "bash.exe", root / "usr" / "bin" / "bash.exe"):
+            if cand.is_file() and not _WSL_LAUNCHER.search(str(cand)):
+                return [str(cand)] + argv[1:]
+    raise LookupError(f"`{argv[0]}` resolves to the WSL launcher ({found}); install Git for Windows "
+                      "so snippets run in Git Bash, never inside WSL")
+
+
 def check_one(sn: dict, snipdir: Path, table: dict, timeout: float) -> dict:
     res = {"k": sn["k"], "line": sn["line"], "lang": sn["lang"], "mode": sn["mode"],
            "status": "pass", "reason": "", "exit_code": None, "expected": None, "actual": None}
+    blocked = exec_policy.snippet_reason(sn["lang"], sn["code"])
+    if blocked:
+        res.update(status="fail", reason=f"execution policy: {blocked}; drop {{{sn['mode'].split('-')[0]}}} "
+                                         "and show representative output")
+        return res
     tmpl = table.get(sn["lang"])
     if not tmpl:
         res.update(status="skipped", reason=f"profile has no snippets.{sn['lang'] or '?'} template")
@@ -130,14 +159,20 @@ def check_one(sn: dict, snipdir: Path, table: dict, timeout: float) -> dict:
     except (KeyError, ValueError) as e:
         res.update(status="fail", reason=f"bad snippets.{sn['lang']} template: {e}")
         return res
+    try:
+        cmds = [(what, no_wsl(argv)) for what, argv in cmds]
+    except LookupError as e:
+        res.update(status="skipped", reason=str(e))
+        return res
     first = cmds[0][1]                  # the compiler (or the interpreter when there is no compile step)
     if shutil.which(first[0]) is None and not Path(first[0]).exists():
         res.update(status="skipped", reason=f"toolchain not found: `{first[0]}` is not on PATH")
         return res
     cwd = str(snipdir)
+    env = exec_policy.sandbox_env(None, snipdir)
     for what, argv in cmds:
         try:
-            r = subprocess.run(argv, cwd=cwd, capture_output=True, stdin=subprocess.DEVNULL,
+            r = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, stdin=subprocess.DEVNULL,
                                timeout=max(timeout * 3, 30) if what == "compile" else timeout)
         except subprocess.TimeoutExpired:
             res.update(status="fail", reason=f"{what} timed out")
@@ -199,7 +234,7 @@ def main(argv=None) -> int:
         for sn in snippets:
             key = cache_key(sn, table)
             hit = cache.get(key)
-            if hit and hit.get("status") == "pass":
+            if hit and hit.get("status") == "pass" and not exec_policy.snippet_reason(sn["lang"], sn["code"]):
                 r = dict(hit, k=sn["k"], line=sn["line"], cached=True)
             else:
                 r = check_one(sn, snipdir, table, a.timeout)

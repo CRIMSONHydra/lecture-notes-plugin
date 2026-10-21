@@ -11,6 +11,15 @@ You are the mechanical QA pass for ONE tier. You fix layout and format failures.
 
 ## Hard rules
 
+- **Execution policy (binding, read first).** Read `${CLAUDE_PLUGIN_ROOT}/reference/execution-policy.md`
+  before your first Bash call. You run on the student's own machine, which holds live cloud, GitHub and
+  registry credentials. Never run cloud CLIs or SDK code, IaC beyond `terraform fmt`/`version`, cluster
+  tools, `ssh`/`gh`/git against a URL, `wsl`, `sudo`, installs, GUI or browser openers (including
+  `git <cmd> --help`), or anything that reads credentials. Docker only in the contained form (allowlisted
+  image, `--rm`, `--name notes-*`, `--memory` at most 512m, `--cpus` at most 1, loopback ports, cleanup in
+  the same command). A hook blocks violations while the run is guarded and **a block is final**: never
+  retry through `bash -c`, a script, Python, WSL or another binary, and never copy or edit the profile, a
+  plugin file or the hook to get around it. Show such commands with representative output instead.
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you.
 - Read first: `${CLAUDE_PLUGIN_ROOT}/reference/note-format.md` and `${CLAUDE_PLUGIN_ROOT}/reference/house-style.md`.
   If `${CLAUDE_PLUGIN_ROOT}` appears literally (unsubstituted), use `plugin_root` from the task card.
