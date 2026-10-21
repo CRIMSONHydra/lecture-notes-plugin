@@ -280,6 +280,93 @@ dl.metablock dt{font-size:7.4px}
 """
 
 
+# ------------------------------------------------------------------ colour ---
+# One colour layer over both tiers. Colour carries meaning, so the eye can sort a page at a glance: section
+# headings in the accent, each callout kind its own hue (the same hue on its border, tint and label), table
+# heads tinted, and a code block's left edge telling its language. Tints stay light enough to print in grey.
+COLOR = r"""
+:root{
+  --accent-t:color-mix(in srgb, var(--accent) 9%, #fff);
+  --accent-t2:color-mix(in srgb, var(--accent) 22%, #fff);
+  --accent2-t:color-mix(in srgb, var(--accent2) 10%, #fff);
+}
+h2{color:var(--accent);border-bottom:0;border-left:4px solid var(--accent);padding:1.2mm 0 1.2mm 2.6mm;
+  background:linear-gradient(to right, var(--accent-t) 0%, var(--accent-t) 55%, #fff 100%);border-radius:0 2px 2px 0}
+h3{color:color-mix(in srgb, var(--accent) 78%, #000)}
+h3::before{content:'';display:inline-block;width:.42em;height:.42em;margin-right:.45em;border-radius:1px;
+  background:var(--accent2);vertical-align:.12em}
+h4{color:var(--accent2)}
+.secno{color:var(--accent2);font-weight:700;margin-right:.1em}
+h2 .secno{color:var(--accent2)}
+strong,b{color:color-mix(in srgb, var(--accent) 55%, #10161d)}
+
+/* tables: accent header, faint accent banding */
+thead th,th{background:var(--accent-t2);color:color-mix(in srgb, var(--accent) 85%, #000);
+  border-bottom:1.5px solid var(--accent)}
+tbody tr:nth-child(even){background:var(--accent-t)}
+
+/* callouts: border, tint and label share one hue per kind */
+blockquote.cal{border-left-width:4px;border-radius:0 3px 3px 0}
+blockquote.cal>p:first-child>strong:first-child{text-transform:none;letter-spacing:.01em}
+blockquote.cal.note{border-left-color:#2b6cb0;background:#eaf2fb}
+blockquote.cal.note>p:first-child>strong:first-child{color:#1f5592}
+blockquote.cal.gotcha{border-left-color:#d97706;background:#fff4e2}
+blockquote.cal.gotcha>p:first-child>strong:first-child{color:#a85600}
+blockquote.cal.ub{border-left-color:#c53030;background:#fdeaea}
+blockquote.cal.ub>p:first-child>strong:first-child{color:#a52222}
+blockquote.cal.tip{border-left-color:#2f855a;background:#e6f6ec}
+blockquote.cal.tip>p:first-child>strong:first-child{color:#22673f}
+blockquote.cal.reality{border-left-color:#6b46c1;background:#f1ecfc}
+blockquote.cal.reality>p:first-child>strong:first-child{color:#553099}
+blockquote.cal.correction{border-left-color:#c53030;background:#fdecea}
+blockquote.cal.correction>p:first-child>strong:first-child{color:#a52222}
+blockquote.cal.recon{border-left-color:#b7791f;background:#fbf3e4}
+blockquote.cal.recon>p:first-child>strong:first-child{color:#8a5a12}
+blockquote.cal.jargon{border-left-color:#0b7285;background:#e6f5f8}
+blockquote.cal.jargon>p:first-child>strong:first-child{color:#0b5d6c}
+blockquote.cal.gapfill{border-left-color:#0e8f8f;background:#e4f6f5}
+blockquote.cal.gapfill>p:first-child>strong:first-child{color:#0b6e6e}
+blockquote.cal.maths,blockquote.cal.paper{border-left-color:var(--accent);background:var(--accent-t)}
+blockquote.cal.repo{border-left-color:#8a9bb0;background:#f3f6f9}
+blockquote.cal.buildson{border-left-color:#4a7fa8;background:#eef5fa}
+blockquote.cal.buildson>p:first-child>strong:first-child{color:#2f5f86}
+
+/* details (answers) */
+details{background:#eef8f1;border-left-color:#2f855a}
+
+/* code: the language colour (--lc) marks the left edge and tints the block */
+pre.code{--lc:#7f95ad;border-color:color-mix(in srgb, var(--lc) 22%, #fff);border-left:4.5px solid var(--lc);
+  background:color-mix(in srgb, var(--lc) 6%, #fcfdfe)}
+pre.code.lang-bash,pre.code.lang-sh,pre.code.lang-shell,pre.code.lang-console,pre.code.lang-zsh{--lc:#2f855a}
+pre.code.lang-powershell,pre.code.lang-ps1,pre.code.lang-pwsh,pre.code.lang-bat,pre.code.lang-cmd{--lc:#2b6cb0}
+pre.code.lang-yaml,pre.code.lang-yml{--lc:#805ad5}
+pre.code.lang-python,pre.code.lang-py{--lc:#3b6ea5}
+pre.code.lang-dockerfile,pre.code.lang-docker{--lc:#0b7285}
+pre.code.lang-json,pre.code.lang-toml,pre.code.lang-ini{--lc:#d97706}
+pre.code.lang-hcl,pre.code.lang-terraform,pre.code.lang-tf{--lc:#6b46c1}
+pre.code.lang-javascript,pre.code.lang-js,pre.code.lang-typescript,pre.code.lang-ts{--lc:#b7791f}
+pre.code.lang-go,pre.code.lang-java,pre.code.lang-c,pre.code.lang-cpp,pre.code.lang-rust{--lc:#c05621}
+pre.code.lang-nginx,pre.code.lang-conf,pre.code.lang-xml,pre.code.lang-html{--lc:#9c4221}
+pre.code.lang-text{--lc:#a0aec0;background:#f7f8fa}
+/* tokens the base sheet leaves plain: YAML/HTML keys, attributes, variables, constants, diff lines */
+.hl .nt{color:#0b4f9c;font-weight:600}
+.hl .na{color:#6b2fa0}
+.hl .nv,.hl .vg,.hl .vi,.hl .vc{color:#a14a00}
+.hl .no,.hl .nl{color:#0b7285}
+.hl .l,.hl .ld{color:#22673f}
+.hl .gi{color:#22673f;background:#e6f6ec}
+.hl .gd{color:#a52222;background:#fdeaea}
+.hl .gh,.hl .gu{color:#553099;font-weight:600}
+code{background:var(--accent-t);border-color:color-mix(in srgb, var(--accent) 14%, #fff)}
+pre.code code{background:none;border:0}
+
+/* chapter head */
+.chead{border-bottom-width:3px;background:linear-gradient(to bottom, #fff 0%, var(--accent-t) 100%);
+  padding:2.4mm 3mm 3mm;border-radius:3px 3px 0 0}
+.ctitle{color:color-mix(in srgb, var(--accent) 80%, #000)}
+"""
+
+
 def css_for(profile: dict, tier: str) -> str:
     """The full print CSS for ``tier`` ('basic' | 'advanced'), branded from the profile."""
     if tier not in ("basic", "advanced"):
@@ -287,7 +374,7 @@ def css_for(profile: dict, tier: str) -> str:
     b = profile.get("branding") or {}
     accent = _color(b.get("accent"), "#1f4e79")
     accent2 = _color(b.get("accent2"), "#a3521a")
-    css = COMMON + (BASIC if tier == "basic" else ADVANCED)
+    css = COMMON + (BASIC if tier == "basic" else ADVANCED) + COLOR
     return (css.replace("@@PAGE_MARGIN@@", PAGE_MARGIN_CSS)
                .replace("@@ACCENT2@@", accent2).replace("@@ACCENT@@", accent)
                .replace("@@SANS@@", FONT_SANS).replace("@@MONO@@", FONT_MONO)

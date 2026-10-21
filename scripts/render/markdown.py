@@ -508,6 +508,8 @@ def make_md(tier: str, math: bool, extra_callouts: dict | None = None) -> Markdo
             lead = ""
             if i + 2 < n and toks[i + 1].type == "paragraph_open" and toks[i + 2].type == "inline":
                 ch = toks[i + 2].children or []
+                while ch and ch[0].type == "text" and not ch[0].content.strip():
+                    ch = ch[1:]                    # markdown-it emits an empty text token before a leading **
                 if ch and ch[0].type == "strong_open":
                     parts = []
                     for c in ch[1:]:
@@ -552,6 +554,15 @@ def make_md(tier: str, math: bool, extra_callouts: dict | None = None) -> Markdo
 # =====================================================================
 # 5. Post-processing: tables
 # =====================================================================
+_SECNO = re.compile(r'(<h([23]) id="sec-[^"]+">)§(\S+) ')
+
+
+def mark_secno(h: str) -> str:
+    """Wrap a heading's ``§N.k`` in ``<span class="secno">`` so it can take its own colour. The text is unchanged,
+    so the PDF still reads ``§N.k Title`` for the audit and the bookmarks."""
+    return _SECNO.sub(lambda m: f'{m.group(1)}<span class="secno">§{m.group(3)}</span> ', h)
+
+
 def fix_tables(h: str) -> str:
     """Wrap tables in ``.tw`` and give very wide ones a smaller font."""
     def repl(m: re.Match) -> str:
@@ -644,7 +655,7 @@ def render_chapter(ch: Chapter, md: MarkdownIt, ctx: dict, tier: str,
     env = {"math": 0, "mermaid": 0, "figures": [], "unmapped": set(),
            "link": dict(ctx, chapter=ch), "math_on": bool(ctx.get("math"))}
     h = md.render(strip_inline_markers(ch.md), env)
-    h = fix_tables(h)
+    h = mark_secno(fix_tables(h))
     h = replace_glyphs(h, env["unmapped"])
     h = h.replace("<details>", "<details open>")
     meta_html = meta_block(ch, md, env, tier, counterpart)

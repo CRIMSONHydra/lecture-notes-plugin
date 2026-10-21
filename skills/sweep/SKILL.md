@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Cross-note continuity pass over a finished (or partly finished) subject project. Maps which concepts each lecture introduces and reuses, then inserts small idempotent edits into the existing notes (builds-on back-references, recaps in Basic, forward links, propagated corrections, terminology aliases, recurring-example links, resolution of pending references to notes that did not exist yet), rebuilds PDFs, index and compendium, and records the run. Safe to re-run. Manual workflow — run as /notes:sweep after /notes:update.
+description: Cross-note continuity pass over a finished (or partly finished) subject project. Maps which concepts each lecture introduces and reuses, then inserts small idempotent edits into the existing notes (builds-on back-references, recaps in Basic, forward links, propagated corrections, terminology aliases, recurring-example links, resolution of pending references to notes that did not exist yet, and scrubbing prose that talks about how the notes were made), rebuilds PDFs, index and compendium, and records the run. Safe to re-run. Manual workflow — run as /notes:sweep after /notes:update.
 argument-hint: "[--tier both|basic|advanced] [--sessions 3,5] [--dry-run] [--yes]"
 disable-model-invocation: true
 allowed-tools: Bash(uv run *) Read Glob Grep Agent AskUserQuestion
@@ -22,7 +22,8 @@ edit a note yourself.
 - Every Agent call is foreground (`run_in_background: false`); parallel dispatches go in ONE message. Never
   end the turn before step 8.
 - Edits are **Edit-only and idempotent**: every insertion is wrapped in `<!-- sweep:ID -->` ...
-  `<!-- /sweep:ID -->`, so a re-run replaces it and never duplicates it. Notes are never rewritten whole.
+  `<!-- /sweep:ID -->`, so a re-run replaces it and never duplicates it; a `scrub` replaces a passage in place and
+  leaves nothing to find, so a re-run has nothing to do. Notes are never rewritten whole.
 - The sweep never changes ledger inputs: `/notes:update` does not see a swept note as changed.
 - Never Read a `.pdf`. Work only inside the project (`<P>` is the working directory or its first parent
   holding `.notes-plugin-internal/profile.md`).
@@ -43,7 +44,10 @@ Read the summary lines it prints (sessions, concepts, corrections, and **pending
 and a plain-text scan of the notes, so it is cheap. `inventory.json` `pending` lists every `pending-ref` marker and
 every legacy stale phrase ("has no note yet", "named without links") per note with line, heading, target sessions and
 `resolvable` (the target note exists in that tier). Writers cited sessions whose note was not written yet; now it
-usually is. A sweep with only pending items is worth running even when there are no concept edits.
+usually is. `inventory.json` `process_talk` lists every passage that talks about how a note was made instead of the
+subject ("representative output, not run on this machine", "the digest", "the execution policy"): a student does not
+need it, and each one becomes a `scrub` edit. A sweep with only pending or process-talk items is worth running even
+when there are no concept edits.
 
 ## Step 3. Analyst (one per tier, in parallel, ONE message)
 
@@ -67,9 +71,10 @@ Each tier keeps its own concepts and plan file. Confirm both files with `Glob`.
 ## Step 4. Show the plan, confirm once
 
 Summarise each plan: edits per note and per type (builds-on, recap, forward link, propagated correction,
-alias, example link, resolve-pending), and any edit the analyst listed as `unresolved` (including pending references
-whose target note is still missing: they stay in place). Check that every `resolvable` pending item of the inventory
-has a `resolve-pending` edit; if not, say so and send the analyst back once. With `--dry-run` stop here. Interactive
+alias, example link, resolve-pending, scrub), and any edit the analyst listed as `unresolved` (including pending
+references whose target note is still missing: they stay in place). Check that every `resolvable` pending item of the
+inventory has a `resolve-pending` edit and every `process_talk` item a `scrub` edit; if not, say so and send the
+analyst back once. With `--dry-run` stop here. Interactive
 and no `--yes`: `AskUserQuestion` once ("Apply N edits across M notes?", Apply / Cancel). Headless or `--yes`:
 apply. Cancel: stop; nothing has been written to a note.
 

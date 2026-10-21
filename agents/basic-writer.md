@@ -23,7 +23,7 @@ class. A note that is short because it skipped taught material has failed, whate
   deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
   cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
   or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
-  such commands with representative output instead. Do not probe the environment (`docker version`,
+  such commands with their expected output instead, and never write in a note whether or why a command was run. Do not probe the environment (`docker version`,
   `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you. Your rules are the
   reference docs and the profile.
@@ -129,7 +129,8 @@ snippets you touch. Update `Verified as of` and the sidecars. Then run the same 
 4. **Snippets: run what the execution policy allows, and nothing else.** Every example is complete and
    compilable. A snippet the policy allows is marked `{run}` with a `text` block of this machine's real
    output directly beneath. A snippet the policy forbids (cloud, IaC, clusters, remote, uncontained
-   Docker) has no `{run}`. Its output is representative and labelled so, built from the transcript, screen
+   Docker) has no `{run}`. Its output is introduced as "Output:" or "Output (from the class demo):", never
+   as "representative" or "not run", and is built from the transcript, screen
    notes, instructor code and official docs. Run each allowed snippet once to capture its output. No
    exploratory runs, no environment probing (`docker version`, `git config --system`, `--help` pages), no
    extra demos the class did not do. Compile and run in

@@ -22,7 +22,7 @@ shown, what was wrong, what was missing) must be in `digest.md`.
   deny it, or answer "run exactly this instead" (then run that exact command). Approved commands are
   cleaned up when you stop. **A block is final**: never retry it through `bash -c`, a script, Python, WSL
   or another binary, and never copy or edit the profile, a plugin file or the hook to get around it. Show
-  such commands with representative output instead. Do not probe the environment (`docker version`,
+  such commands with their expected output instead, and never write in a note whether or why a command was run. Do not probe the environment (`docker version`,
   `git config --system`, `--help` pages).
 - `omitClaudeMd` is on: the project's CLAUDE.md is deliberately invisible to you. Your rules are this
   file, the reference docs and the profile.

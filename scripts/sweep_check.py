@@ -28,6 +28,9 @@ swap the ``pending-ref`` span (or the stale sentence quoted in ``replaces``, whi
 ``<!-- sweep:ID -->text<!-- /sweep:ID -->`` inside the paragraph; re-applying replaces the span's text.
 With ``--plan`` or ``--apply`` a pending reference whose target note exists and that is still unresolved is a problem;
 references to notes that do not exist yet are only listed (``note:`` lines).
+``scrub`` edits ``{id, note, tier, type: "scrub", replaces, text}`` swap a passage that talks about how the note was
+made (``notes_lib.process_talk``) for its reader-facing rewrite, with no markers; with ``--plan`` or ``--apply`` any
+such passage still in a note is a problem.
 Exit 1 when problems are found (apply: when an edit could not be placed).
 """
 from __future__ import annotations
@@ -39,7 +42,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from notes_lib import guard, layout, notefile, pending as pending_lib, platform as plat  # noqa: E402
+from notes_lib import guard, layout, notefile, pending as pending_lib, platform as plat, process_talk  # noqa: E402
 
 plat.utf8_stdio()
 M = notefile.SWEEP_ANY_RE
@@ -121,10 +124,41 @@ def apply_resolve_pending(text: str, edit: dict) -> tuple[str, str]:
     return out.replace("\n", nl), "resolved"
 
 
+def apply_scrub(text: str, edit: dict) -> tuple[str, str]:
+    """``scrub``: replace a prose unit that talks about how the note was made (``replaces``, exact or whitespace-
+    tolerant) with its reader-facing rewrite (``text``; empty = drop the unit and one blank line). No markers: once
+    the unit is gone there is nothing to find, so a re-run reports ``already-clean``.
+    status scrubbed | already-clean | replaces-not-found."""
+    nl = "\r\n" if "\r\n" in text else "\n"
+    t = text.replace("\r\n", "\n")
+    old = str(edit.get("replaces") or "").replace("\r\n", "\n")
+    new = str(edit.get("text") or "").replace("\r\n", "\n").strip("\n")
+    span = None
+    if old:
+        i = t.find(old)
+        span = (i, i + len(old)) if i >= 0 else None
+        if span is None:
+            m = _flex(old).search(t)
+            span = m.span() if m else None
+    if span is None:
+        if len(new) >= 12 and _flex(new).search(t):      # the rewrite is already there
+            return text, "already-clean"
+        return text, "replaces-not-found"
+    a, b = span
+    if not new:                                   # drop the unit with its line end and the blank line after it
+        if t[b:b + 2] == "\n\n":
+            b += 2
+        elif a >= 2 and t[a - 2:a] == "\n\n":     # last unit before EOF or a heading: drop the blank line before
+            a -= 2
+    return (t[:a] + new + t[b:]).replace("\n", nl), "scrubbed"
+
+
 def apply_edit(text: str, edit: dict) -> tuple[str, str]:
     """(new text, status) with status replaced | inserted | anchor-not-found. Idempotent."""
     if edit.get("type") == "resolve-pending":
         return apply_resolve_pending(text, edit)
+    if edit.get("type") == "scrub":
+        return apply_scrub(text, edit)
     nl = "\r\n" if "\r\n" in text else "\n"
     t = text.replace("\r\n", "\n")
     sid = re.escape(edit["id"])
@@ -202,7 +236,9 @@ def main(argv=None) -> int:
                 guard.assert_writable(p, ddir)
                 p.write_bytes(new.encode("utf-8"))
             applied.append({"id": e["id"], "note": p.name, "status": status})
-            if status == "replaces-not-found":
+            if status == "replaces-not-found" and e.get("type") == "scrub":
+                problems.append(f"{e['id']}: the passage to scrub was not found in {p.name}")
+            elif status == "replaces-not-found":
                 problems.append(f"{e['id']}: neither the stale sentence nor a pending-ref marker was found in {p.name}")
             if status == "anchor-not-found":
                 problems.append(f"{e['id']}: anchor {e.get('anchor')!r} not found in {p.name}")
@@ -220,7 +256,7 @@ def main(argv=None) -> int:
             problems.append(f"sweep id {key} is in several notes: {', '.join(sorted(set(files)))}")
     if edits and not a.apply:
         want = {f"{e.get('tier') or tiers[0]}:{e['id']}": Path(str(e["note"])).name for e in edits
-                if (e.get("tier") or tiers[0]) in tiers}
+                if (e.get("tier") or tiers[0]) in tiers and e.get("type") != "scrub"}   # scrubs leave no marker
         for key, fname in want.items():
             if key not in owner:
                 problems.append(f"plan edit {key} is not applied in {fname} yet")
@@ -247,11 +283,20 @@ def main(argv=None) -> int:
                         waiting.append(msg)
                 else:
                     waiting.append(msg + " (target note still missing: left in place)")
+    # process talk: with a plan, every passage about how the note was made must be gone by now
+    if a.plan or a.apply:
+        for t in tiers:
+            d = lay.notes(t)
+            for f in sorted(d.glob("[0-9]*.md")) if d.is_dir() else []:
+                for it in process_talk.scan(f.read_text(encoding="utf-8-sig")):
+                    problems.append(f"{t}/{f.name}:{it['line']}: still talks about how the note was made "
+                                    f"({it['phrase']}): {it['text'][:70]}")
     n_blocks = len(owner)
     for w in waiting:
         print(f"  note: {w}")
     print(f"sweep_check: {n_blocks} sweep block(s) in {', '.join(tiers)}; "
-          + (f"applied {sum(1 for x in applied if x['status'] in ('replaced', 'inserted', 'resolved'))}/{len(applied)}; " if a.apply else "")
+          + (f"applied {sum(1 for x in applied if x['status'] in ('replaced', 'inserted', 'resolved', 'scrubbed', 'already-clean'))}"
+             f"/{len(applied)}; " if a.apply else "")
           + f"{len(problems)} problem(s)")
     for p in problems:
         print(f"  - {p}")
