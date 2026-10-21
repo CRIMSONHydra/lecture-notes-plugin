@@ -265,7 +265,8 @@ def main(argv=None) -> int:
                 r = dict(hit, k=sn["k"], line=sn["line"], cached=True)
             else:
                 if v and v["decision"] == "allow":
-                    exec_classifier.record(f"snippets-{stem}", "", {"kind": "snippet", "text": sn["code"]}, v)
+                    exec_classifier.record(f"snippets-{stem}", "", {"kind": "snippet", "text": sn["code"]},
+                                           dict(v, cleanup=exec_cleanup.prefilter(v.get("cleanup") or [])))
                 r = check_one(sn, snipdir, table, a.timeout, v)
                 r["cached"] = False
                 if r["status"] == "pass" and not a.no_cache:

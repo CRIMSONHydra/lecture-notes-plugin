@@ -95,6 +95,28 @@ if leftover.exists() or not any(d.startswith("ok") for d in done):
 if exec_cleanup.cleanup("cleanrun", "agent-1"):
     bad.append(("cleanup must run once", "second call did work"))
 
+# regression (2026-10-21): plans that deleted a run's own sidecars and work/meta/<tier> must never run
+proj = Path(TD) / "proj"
+meta_adv = proj / ".notes-plugin-internal" / "work" / "meta" / "advanced"
+meta_adv.mkdir(parents=True)
+cov = meta_adv / "07-x.coverage.json"
+cov.write_text("{}", encoding="utf-8")
+for c in (f'rm -rf "{meta_adv.as_posix()}"', f'rm -f "{cov.as_posix()}"', f'rmdir "{meta_adv.as_posix()}"',
+          f'rm -rf "{(proj / "notes").as_posix()}"'):
+    if exec_cleanup.safe_cleanup(c, roots):
+        bad.append(("cleanup inside a notes project must be refused", c))
+fresh, existing = Path(TD) / "notes-not-created-yet", Path(TD) / "notes-already-here"
+existing.mkdir()
+kept = exec_cleanup.prefilter([f'rm -rf "{fresh.as_posix()}"', f'rm -rf "{existing.as_posix()}"',
+                               f'rm -rf "{meta_adv.as_posix()}"', "docker rm -f notes-web"])
+if kept != [f'rm -rf "{fresh.as_posix()}"', "docker rm -f notes-web"]:
+    bad.append(("prefilter keeps only removals of things that do not exist yet", kept))
+ec.record("incident", "agent-9", {"kind": "command", "text": "x"},
+          {"decision": "allow", "command": "x", "creates": [], "cleanup": [f'rm -rf "{meta_adv.as_posix()}"']})
+exec_cleanup.cleanup("incident", "agent-9")
+if not cov.exists():
+    bad.append(("incident replay: work/meta was deleted", str(meta_adv)))
+
 
 def hook(script: str, evt: dict) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(ROOT / "scripts" / script)], input=json.dumps(evt),
