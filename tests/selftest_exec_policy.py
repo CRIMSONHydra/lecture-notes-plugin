@@ -261,17 +261,53 @@ if ep.fast_allow(f'uv run "{(Path(TD) / "elsewhere" / "qa.py").as_posix()}"'):
     bad.append(("a script outside the plugin must not be fast-allowed", ""))
 ep.PLUGIN_ROOT = real_root
 
-# the guard belongs to a session: another session's commands are left alone, notes agents never are
+# the guard belongs to a session: another session's commands are left alone, and another session's notes
+# agents are gated only while they work inside the guarded project
 guard.set_guard(data, protect=[TD], allow=[TD], hours=1, run_id="update-11111111-2222-3333-4444-555555555555")
 other = {"tool_name": "Bash", "tool_input": {"command": "cat ~/.aws/credentials"}, "cwd": TD,
          "session_id": "99999999-2222-3333-4444-555555555555"}
 if hook("exec_guard_hook.py", other).returncode != 0:
     bad.append(("another session's command must not be gated", ""))
 if hook("exec_guard_hook.py", dict(other, agent_type="notes:basic-writer", agent_id="x")).returncode != 2:
-    bad.append(("a notes agent is gated whatever its session", ""))
+    bad.append(("a notes agent working inside the guarded project is gated whatever its session", ""))
 if hook("exec_guard_hook.py", dict(other, session_id="11111111-2222-3333-4444-555555555555")).returncode != 2:
     bad.append(("the owning session is gated by the floor", ""))
 guard.clear_guard(data)
+
+# per-run guards: a guarded run in project A never gates, records or cleans up for a run in project B
+proj_a, proj_b = Path(TD) / "projA", Path(TD) / "projB"
+for d in (proj_a / "resources", proj_a / "notes", proj_b / "resources", proj_b / "notes"):
+    d.mkdir(parents=True, exist_ok=True)
+run_a, run_b = "update-11111111-2222-3333-4444-555555555555", "update-99999999-2222-3333-4444-555555555555"
+guard.set_guard(data, protect=[proj_a / "resources"], allow=[proj_a / "notes"], hours=1, run_id=run_a)
+agent_b = {"tool_name": "Bash", "tool_input": {"command": "terraform apply"}, "cwd": str(proj_b),
+           "session_id": "99999999-2222-3333-4444-555555555555", "agent_type": "notes:basic-writer", "agent_id": "b-1"}
+if hook("exec_guard_hook.py", agent_b).returncode != 0:
+    bad.append(("an unguarded run's notes agent outside the guarded project must not be gated", ""))
+if hook("exec_guard_hook.py", dict(agent_b, cwd=str(proj_a))).returncode != 2:
+    bad.append(("a foreign notes agent working inside the guarded project is gated", ""))
+ledger_a = ec.ledger_path(run_a)
+seen_a = ledger_a.read_text(encoding="utf-8") if ledger_a.is_file() else ""
+guard.set_guard(data, protect=[proj_b / "resources"], allow=[proj_b / "notes"], hours=1, run_id=run_b)
+if guard.load_guard(data, run_a) is None:
+    bad.append(("setting run B must not replace run A's guard", ""))
+if hook("exec_guard_hook.py", agent_b).returncode != 2:
+    bad.append(("run B's own guard gates run B's agents", ""))
+if hook("exec_guard_hook.py", dict(agent_b, tool_input={"command": "make mktemp-notes"})).returncode != 0:
+    bad.append(("run B's classifier approval", ""))
+ledger_b = ec.ledger_path(run_b)
+if not ledger_b.is_file() or "mktemp-notes" not in ledger_b.read_text(encoding="utf-8"):
+    bad.append(("run B's approval is recorded under run B", ""))
+if (ledger_a.read_text(encoding="utf-8") if ledger_a.is_file() else "") != seen_a:
+    bad.append(("run B's approvals must not land in run A's ledger", ""))
+wr = {"tool_name": "Write", "tool_input": {"file_path": str(proj_a / "resources" / "x.txt")}, "cwd": str(proj_b),
+      "session_id": "99999999-2222-3333-4444-555555555555"}
+if hook("guard_hook.py", wr).returncode != 2:
+    bad.append(("run A's resources stay protected from run B's session", ""))
+guard.clear_guard(data, run_b)
+if guard.load_guard(data, run_a) is None or guard.load_guard(data, run_b) is not None:
+    bad.append(("clearing run B leaves run A's guard alone", ""))
+guard.clear_guard(data, run_a)
 
 # snippets: output is compared as a terminal shows it (both streams, in order)
 import importlib.util

@@ -26,9 +26,11 @@ remotes, containers, images, packages or services.
 | Cleanup (`exec_cleanup`) | Every approval records what the command creates and how to remove it; a plan for something that already exists is dropped at approval, because the command cannot have created it. When you stop, a hook carries out the remaining plans: only `notes-*` entries of a temp directory that came into being during the run (never anything inside the project), and only Docker objects that carry both the `notes-` name and this run's label (a student's own `notes-db` is never touched). Files are removed in Python, so this works on any OS (Git Bash `/tmp` and `/c/…` paths are mapped; read-only files such as a clone's `.git/objects` are handled). Things created inside a WSL distribution are removed in that distribution. Then the Docker objects labelled for your agent are swept; `guard.py clear` sweeps the whole run. Name anything you create in a temp directory `notes-…`, or it cannot be cleaned up. |
 | Snippets (`check_snippets.py`) | Classifies a note's fences in one batch before anything runs. A denied fence fails with the reason. Allowed fences run with credentials removed from the environment, git limited to local repositories, and Git Bash, never the WSL launcher, as `bash` on Windows. Output is compared as a terminal shows it: stdout and stderr in the order they were written (stdout alone, or the two streams one after the other, also count as a match). |
 
-The gate belongs to one run: the plugin's own agents, and any subagent spawned during the run whatever its
-type, are gated; the session that started the run is held to the floor; other Claude Code sessions on the
-machine are left alone. While a run is guarded, an agent also may not write under the plugin's own files or
+The gate belongs to one run, and each run has its own guard file (`<data>/guards/<run>.json`): the plugin's
+own agents, and any subagent spawned during the run whatever its type, are gated by that run's guard; the
+session that started the run is held to the floor; other Claude Code sessions on the machine are left alone,
+and their notes agents are gated only while they work inside the guarded project. Concurrent runs in other
+projects therefore never overwrite, clear or clean up for each other. While a run is guarded, an agent also may not write under the plugin's own files or
 its data directory (the guard, the ledger, the cache): the Write/Edit hook refuses it.
 
 A block is final. **Do not look for another route to the same command.** That includes `bash -c`, a

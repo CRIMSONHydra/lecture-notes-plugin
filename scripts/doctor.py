@@ -4,7 +4,7 @@
 # ///
 """Environment report for the `notes` plugin.
 
-    uv run doctor.py [--project DIR] [--data-dir D] [--json OUT] [--clear-guard] [--no-network]
+    uv run doctor.py [--project DIR] [--data-dir D] [--json OUT] [--clear-guard [RUN]] [--no-network]
 
 Checks uv, a Chromium-family browser (needed for PDFs), GPU/Whisper/OCR acceleration hints,
 GitHub reachability, C/C++ compilers, cached KaTeX/Mermaid assets, the read-only guard, and the
@@ -128,11 +128,11 @@ def ocr_accel() -> dict:
 
 
 def check_guard(data_dir: Path) -> dict:
-    g = guard.load_guard(data_dir)
-    if not g:
-        return {"active": False}
-    return {"active": True, "run_id": g.get("run_id"), "created": g.get("created"),
-            "expires": g.get("expires"), "protect": g.get("protect"), "allow": g.get("allow")}
+    gs = [{"run_id": g.get("run_id"), "created": g.get("created"), "expires": g.get("expires"),
+           "protect": g.get("protect"), "allow": g.get("allow")} for g in guard.load_guards(data_dir)]
+    if not gs:
+        return {"active": False, "guards": []}
+    return {"active": True, **gs[0], "guards": gs}          # top-level fields: the newest run's guard
 
 
 def check_project(project=None, data_dir=None) -> dict:
@@ -212,7 +212,7 @@ def build_report(data_dir: Path, network: bool = True, project=None) -> dict:
                              "the plugin ignores it; delete it once you have checked nothing is needed")
     if rep["guard"]["active"]:
         rep["advice"].append("a read-only guard is active (a run is in progress, or it is stale): "
-                             "clear it with --clear-guard")
+                             "clear it with --clear-guard" + (" RUN" if len(rep["guard"]["guards"]) > 1 else ""))
     return rep
 
 
@@ -243,7 +243,8 @@ def print_table(r: dict) -> None:
     rows.append(("katex cache", _mark(a["katex"]) if a["katex"] else "--  ", "cached" if a["katex"] else "downloaded on first build"))
     rows.append(("mermaid cache", _mark(a["mermaid"]) if a["mermaid"] else "--  ", "cached" if a["mermaid"] else "downloaded on first use"))
     gd = r["guard"]
-    rows.append(("guard", "--  ", f"ACTIVE until {gd['expires']} (run {gd.get('run_id') or '-'})" if gd["active"] else "inactive"))
+    rows.append(("guard", "--  ", "; ".join(f"ACTIVE until {g['expires']} (run {g.get('run_id') or '-'})"
+                                         for g in gd["guards"]) if gd["active"] else "inactive"))
     pj = r["project"]
     if pj["found"]:
         rows.append(("project", _mark(bool(pj.get("profile_ok"))),
@@ -265,14 +266,22 @@ def main(argv=None) -> int:
     ap.add_argument("--data-dir")
     ap.add_argument("--project", help="project dir (default: discovered from cwd; absent is fine)")
     ap.add_argument("--json", metavar="OUT", help="write the report as JSON")
-    ap.add_argument("--clear-guard", action="store_true", help="remove a stale read-only guard")
+    ap.add_argument("--clear-guard", nargs="?", const=True, default=False, metavar="RUN",
+                    help="remove a stale read-only guard (name the run when several are active)")
     ap.add_argument("--no-network", action="store_true", help="skip the GitHub reachability probe")
     a = ap.parse_args(argv)
 
     ddir = plat.resolve_data_dir(a.data_dir)
-    if a.clear_guard:
-        had = guard.clear_guard(ddir)
-        print("guard cleared" if had else "no guard was active")
+    if a.clear_guard is not False:
+        active = guard.load_guards(ddir)
+        if a.clear_guard is True and len(active) > 1:
+            print("several runs are guarded; name the stale one with --clear-guard RUN:")
+            for g in active:
+                print(f"  {g.get('run_id') or '(anonymous)'}  expires {g.get('expires')}")
+        else:
+            run = None if a.clear_guard is True else a.clear_guard
+            had = guard.clear_guard(ddir, run)
+            print("guard cleared" if had else "no guard was active")
     rep = build_report(ddir, network=not a.no_network, project=a.project)
     print_table(rep)
     if a.json:

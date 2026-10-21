@@ -144,8 +144,9 @@ the digest rests on transcript, code and slides only: say so in the report.
 
 ## Step 3. Guard
 
-**Under `--batch` skip this step**: `/notes:update` sets one guard for the whole batch (the guard is a single
-file per data dir, so parallel sessions must not set or clear it themselves).
+**Under `--batch` skip this step**: `/notes:update` sets one guard for the whole batch (the batch's sessions
+share it, so they must not set or clear it themselves). Each run's guard is its own file
+(`<data>/guards/<run>.json`), so runs in other projects or sessions never overwrite or clear it.
 
 `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/guard.py" set --data-dir "${CLAUDE_PLUGIN_DATA}" --protect "<protect 1>" "<protect 2>" --allow "<allow 1>" "<allow 2>" "<allow 3>" --run "<profile id>-<nn>-${CLAUDE_SESSION_ID}"`
 
@@ -441,8 +442,8 @@ JSON: `ok`, `mechanical_failures`, `content_failures`, `build.pdfs`, `build.comp
 
 ## Step 13. Clear the guard, record the ledger, clean up (always, even if an earlier step failed)
 
-1. Interactive only: `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/guard.py" clear --data-dir "${CLAUDE_PLUGIN_DATA}"`
-   (under `--batch` the caller clears it).
+1. Interactive only: `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/guard.py" clear --run "<profile id>-<nn>-${CLAUDE_SESSION_ID}" --data-dir "${CLAUDE_PLUGIN_DATA}"`
+   (the same run id as step 3; under `--batch` the caller clears it).
 2. **Ledger.** Per requested tier that was dispatched (also after an abort, as `failed`):
    `uv run "${CLAUDE_PLUGIN_ROOT}/scripts/ledger.py" record --project "<P>" --session <n> --tier <tier> --status <ok|failed|partial> --mode <write|revise> --qa-json "<inputs.paths.reports>/qa-<tier>-<nn>.json"`
    `ok` only when that tier's `qa.py` JSON has `ok: true`; content failures left: `partial`; no note produced

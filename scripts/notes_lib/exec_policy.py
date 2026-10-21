@@ -56,6 +56,7 @@ _CRED_VARS = re.compile(
     r"\$\{?\w*(TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|CREDENTIAL|PRIVATE_KEY|ACCESS_KEY|CLIENT_SECRET)\w*"
     r"|\$env:\w*(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL)", re.I)
 _TAMPER = re.compile(r"LECTURE_NOTES_CLASSIFIER|NOTES_EXEC_CLASSIFIER|exec-cache|exec-ledger|guard\.json|clear-guard"
+                     r"|[\\/]guards\b"
                      r"|hooks\.json|exec_policy|exec_classifier|exec_cleanup|exec_guard_hook|guard_hook", re.I)
 _OVERRIDE = re.compile(r"(?:^|[\s;&|(]|\$env:)(NOTES_EXEC_CLASSIFIER|LECTURE_NOTES_CLASSIFIER_CMD|LECTURE_NOTES_CLASSIFIER_MODEL"
                        r"|LECTURE_NOTES_CLAUDE|LECTURE_NOTES_DATA|CLAUDE_PLUGIN_DATA|CLAUDE_PLUGIN_ROOT)\s*=", re.I)

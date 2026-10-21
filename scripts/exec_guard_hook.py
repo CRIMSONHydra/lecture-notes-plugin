@@ -8,7 +8,10 @@ stdin  = hook JSON ({"tool_input": {"command": ...}, "cwd", "session_id", "agent
 exit 2 = blocked (reason on stderr); exit 0 = no objection (Claude Code's normal permission flow applies).
 
     no active guard, or inside the classifier itself   -> allow (ordinary work is never touched)
-    another session's command (not a plugin agent)     -> allow (the run's rules are not its business)
+    no guard of this event's run                       -> allow (each run has its own guard: a session's
+                                                          guard is matched by session id, and a notes agent
+                                                          from another session only by working inside the
+                                                          guarded project)
     floor (credentials, sudo, env overrides)           -> block; subagents also may not touch the guard,
                                                           the hooks, the ledger or the cache
     the main thread of the owning session              -> allow (the orchestrator runs plugin scripts)
@@ -79,15 +82,25 @@ def main() -> int:
     plugin_agent = agent_type.startswith("notes:")
     subagent = plugin_agent or bool(evt.get("agent_id"))        # a subagent of any kind during a guarded run
     data_dir = _data_dir_stdlib()
-    guard_file_present = (data_dir / "guard.json").is_file()
+    guard_file_present = (data_dir / "guard.json").is_file() or any((data_dir / "guards").glob("*.json"))
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from notes_lib import guard, platform as plat
 
         data_dir = plat.default_data_dir()
-        g = guard.load_guard(data_dir)
-        if not g:
+        guards = guard.load_guards(data_dir)
+        if not guards:
             return 0
+        # Each run has its own guard. The session that set it is gated by it; a notes agent that is not that
+        # session's is gated only when it works inside the guarded project. Another run's guard (another
+        # project, another session) is not this event's business: judging it against that run's folders would
+        # refuse or misrecord its commands and hand its cleanup to the wrong run.
+        mine = guard.owned_by_session(guards, evt.get("session_id"))
+        if not mine and plugin_agent:
+            mine = guard.covering(guards, evt.get("cwd"))
+        if not mine:
+            return 0
+        g = mine[0]
     except BaseException as e:  # noqa: BLE001
         if isinstance(e, SystemExit):
             raise
@@ -99,11 +112,6 @@ def main() -> int:
     try:
         from notes_lib import exec_classifier as ec, exec_policy as ep
 
-        # The guard belongs to one Claude Code session (its id is in the run id). The plugin's own agents are
-        # always gated; anything else from another session is not this run's business.
-        sid, mine = str(evt.get("session_id") or "").lower(), str(g.get("session_id") or "")
-        if not plugin_agent and mine and sid and sid != mine:
-            return 0
         why = ep.floor(cmd, strict=subagent)
         if why:
             return _block(why, subagent, run_id)

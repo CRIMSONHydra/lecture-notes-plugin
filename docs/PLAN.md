@@ -417,9 +417,10 @@ stats(body, closing_sections) -> {"prose_words","code_lines","table_rows","figur
 minutes(prose, code, rows) -> float                   # prose/150 + code*8/60 + rows*15/60
 # guard.py
 class GuardError(PermissionError)
-set_guard(data_dir, protect, allow, hours=6, run_id="") -> Path    # <data>/guard.json
-clear_guard(data_dir); load_guard(data_dir) -> dict|None (None if missing/expired)
-check_path(path, guard) -> str|None; assert_writable(path, data_dir=None)
+set_guard(data_dir, protect, allow, hours=6, run_id="") -> Path    # <data>/guards/<run>.json (one per run)
+clear_guard(data_dir, run_id=None); load_guard(data_dir, run_id=None) -> dict|None; load_guards(data_dir) -> list
+check_path(path, guard) / check_all(path, guards) -> str|None; assert_writable(path, data_dir=None)  # every guard
+owned_by_session(guards, session_id), covering(guards, cwd)    # which run's guard gates a hook event
 ```
 
 **Chrome candidates:**
@@ -443,7 +444,7 @@ The `INSTALL_HINT` says: install Chrome/Edge/Chromium, or run `uv run "<plugin>/
 | `prep_transcript.py` (none) | `<txt> --out DIR [--width 180]` | `header.json`: `Key: Value` lines up to the `====` rule; course, lecture title, start raw plus parsed candidates (m/d vs d/m; unambiguous when a part is over 12), duration_min, generator, model. Missing header is allowed. `transcript.wrapped.txt` (≤180 columns; replaces `fold`). `junk_runs.json`: spans of ≥5 repeated tokens ("you you…"), ≥3× "Thank you.", non-English hallucination markers ("E aí", "Legenda"), each with char offsets and approx time = offset/len × duration. |
 | `fetch_code.py` (none) | `--repo O/N --dir Lec-N --out DIR [--ref HEAD] [--ignore GLOB…] [--max-kb 512]` | One `git/trees/<ref>?recursive=1` API call, then `raw.githubusercontent.com` per file (raw does not count against the rate limit). Uses `GITHUB_TOKEN` if set. Skips ignore globs, binaries (NUL bytes in the first 8 KB) and oversize files. Falls back to `git clone --depth 1 --filter=blob:none --sparse` on 403/429. `manifest.json`: fetched[], skipped[{path,reason}], tree_sha. |
 | `extract_pdf.py` (pymupdf) | `<pdf> --out DIR [--png] [--dpi 80] [--pages 1-5,9]` | `pages/NNN.txt`, optionally `NNN.png`, `outline.json`. Also used by note-qa to look at built PDF pages, because Read cannot render PDFs here. |
-| `guard.py` (none) | `set --data-dir D --protect P… --allow A… [--hours 6] [--run ID]` / `clear` / `status` | Writes `<data>/guard.json` |
+| `guard.py` (none) | `set --data-dir D --protect P… --allow A… [--hours 6] [--run ID]` / `clear [--run ID]` / `status` | Writes `<data>/guards/<run>.json` (pre-1.2.6 `<data>/guard.json` still honoured) |
 | `guard_hook.py` (none) | stdin = hook JSON | Takes `tool_input.file_path` or `notebook_path`; loads guard via `$CLAUDE_PLUGIN_DATA`, falling back to the default data dir. Blocked → stderr `"notes guard: <path> is inside protected <root> (subject repos are read-only). Clear with /notes:doctor --clear-guard if stale."` and exit 2. Otherwise exit 0. Any exception → exit 0 and log to `<data>/guard-errors.log` (fail-open). |
 
 **Render (WP2):**
