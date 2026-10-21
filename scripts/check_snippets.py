@@ -133,6 +133,12 @@ def no_wsl(argv: list[str]) -> list[str]:
                       "so snippets run in Git Bash, never inside WSL")
 
 
+SANDBOX_NOTE = ("cwd is a scratch directory of its own under the notes build dir (never the student's files); "
+                "TMPDIR/TMP/TEMP point inside it; cloud, cluster, registry and token variables are removed; git "
+                "can only reach local paths (GIT_ALLOW_PROTOCOL=file, no credential helper); runs time out after "
+                "a few seconds")
+
+
 def classify(snippets: list[dict], stem: str) -> dict:
     """Verdict per snippet ``k``: the floor first, then one classifier call for the rest (cached)."""
     out, items = {}, []
@@ -143,7 +149,8 @@ def classify(snippets: list[dict], stem: str) -> dict:
         else:
             items.append({"id": str(sn["k"]), "kind": "snippet", "lang": sn["lang"], "text": sn["code"]})
     if items:
-        got = exec_classifier.judge(items, {"run_id": f"snippets-{stem}"})
+        got = exec_classifier.judge(items, {"run_id": f"snippets-{stem}", "snippet_sandbox": SANDBOX_NOTE,
+                                            "shell": "bash"})
         out.update({sn["k"]: got[str(sn["k"])] for sn in snippets if str(sn["k"]) in got})
     return out
 

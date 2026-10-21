@@ -26,7 +26,7 @@ from pathlib import Path
 
 from . import platform as plat, toolchain
 
-POLICY_VERSION = "4"                                           # bump to invalidate cached verdicts
+POLICY_VERSION = "5"                                           # bump to invalidate cached verdicts
 # Pinned: older CLIs resolve the `haiku` alias to Haiku 4.5 (they warn "unrecognized_model" on stderr for a
 # newer id but still use it).
 MODEL = "claude-haiku-5-5"
@@ -42,6 +42,11 @@ ALLOW only if ALL hold:
 1. NO COST: it cannot create, change or bill any cloud or SaaS resource, call a paid API, log in, push, publish, send email, or change anything in an account. Anonymous read-only HTTP GET/HEAD of public material is fine. Read-only use of the student's EXISTING GitHub login is fine when it reads a course resource: a repo in context.course_resources or one the item's own text names (item.course_repo_referenced) through `gh api` GET, `gh repo view`, `gh repo clone` / `git clone` into a temp or work dir, `gh release download`, `gh run view`. Any gh or git call that writes (gh api -X POST/PUT/PATCH/DELETE or -f/-F/--input fields, pr/issue/release create, repo create/delete/fork/edit, secret, variable, auth, workflow run, git push) is denied.
 2. LIGHT LOAD: it finishes in well under a minute, stays within about 1 CPU and 512 MB RAM, writes at most a few hundred MB (only under a temp dir or the snippet/work dir), downloads at most about 200 MB, does not start daemons, clusters or GUI apps (Docker Desktop, minikube, kind, browsers, editors), runs no load tests, scans or fork loops, and leaves nothing running. Running a command inside WSL (`wsl … <command>`) is fine when the inner command passes these rules; WSL management (--shutdown, --terminate, --unregister, --install, --import, --set-default, --update) is denied.
 3. LOCAL AND REVERSIBLE: it does not delete or modify the student's existing files, repos, containers, images, volumes, packages, services, scheduled tasks, registry or shell profile; it does not install software system-wide; it does not open browser pages or help pages that launch a browser (`git <cmd> --help` does on Windows; use `-h`).
+
+SNIPPETS: items of kind "snippet" run inside context.snippet_sandbox when it is given: the working directory is \
+a scratch directory of their own (inside the notes build dir, never the student's files), TMPDIR/TMP/TEMP point \
+inside it, credentials are removed and git can only reach local paths. Writing, deleting or `mktemp` relative to \
+that directory touches nothing of the student's and needs no cleanup entry; judge such a snippet on cost and load.
 
 TOOLCHAIN: context.toolchain says how tools resolve on this machine (Python behind uv, Node behind fnm/nvm/volta, \
 tools that exist only inside WSL, Git Bash rewriting /path arguments). If a command that passes the rules would \
