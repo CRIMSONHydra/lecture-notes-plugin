@@ -274,6 +274,14 @@ def t_style(sel):
     h = md_mod.mark_secno('<h2 id="sec-3.2">§3.2 Loops</h2><h3 id="sec-3.2.1">§3.2.1 for</h3>')
     check("style: section numbers wrapped, text unchanged",
           h.count('<span class="secno">') == 2 and re.sub(r"<[^>]+>", "", h) == "§3.2 Loops§3.2.1 for", h)
+    det = ("1. Q one?\n   <details><summary>Answer</summary>**Bold one.**\n   more.</details>\n\n"
+           "2. Q two? <details><summary>Answer</summary>**Bold two.**</details>\n\n"
+           "3. Q three?\n   <details><summary>Answer</summary>\n\n   **Bold three.**\n\n   </details>\n")
+    out = md.render(md_mod.open_details_blocks(det))
+    check("style: details answers render their markdown in every layout",
+          "**" not in out and all(f"<strong>Bold {w}.</strong>" in out for w in ("one", "two", "three")), out[:500])
+    check("style: details fix leaves code fences alone",
+          md_mod.open_details_blocks("```\n<details>x</details>\n```") == "```\n<details>x</details>\n```")
     for tier in ("basic", "advanced"):
         sheet = css_mod.css_for({"branding": {"accent": "#0b5394", "accent2": "#c55a11"}}, tier)
         check(f"style: colour layer present ({tier})",
