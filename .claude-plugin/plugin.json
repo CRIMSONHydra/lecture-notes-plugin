@@ -1,7 +1,7 @@
 {
   "name": "notes",
   "displayName": "Lecture Notes",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "Lecture transcript/recording → shared digest → Basic (revision) and Advanced (deep-dive, web-researched) PDF notes with generated figures. OS/CPU/GPU agnostic; Python via uv.",
   "author": {
     "name": "CRIMSONHydra"

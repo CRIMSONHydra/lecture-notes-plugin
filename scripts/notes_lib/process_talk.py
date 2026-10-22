@@ -30,6 +30,9 @@ PATTERNS: list[tuple[str, re.Pattern]] = [(name, re.compile(rx, re.I)) for name,
                                r"|\bthe transcript shows no\b|\bwas (?:also )?(?:checked|re-?run) (?:on|with) (?:git bash|coreutils|this)\b"),
 )]
 
+# "the digest" is also a container image digest (`nginx@sha256:...`, "pin by digest", "update the digest"): a unit
+# that talks about image digests is about the subject, not about the lecture digest.
+_IMAGE_DIGEST = re.compile(r"sha256|@sha|@DIGEST|\bimage digests?\b|\bby digest\b|\bdigest pin|\bpinn(?:ed|ing)\b", re.I)
 _INLINE_CODE = re.compile(r"`[^`\n]*`")
 _KEEP_INLINE = re.compile(r"`\{run[^`]*\}`")                 # "`{run}` snippet" in prose is process talk too
 
@@ -73,7 +76,8 @@ def scan(text: str) -> list[dict]:
             continue
         probe = _KEEP_INLINE.sub(" {run} ", chunk)
         probe = _INLINE_CODE.sub(" ", probe)
-        hit = next((name for name, rx in PATTERNS if rx.search(probe)), None)
+        hit = next((name for name, rx in PATTERNS if rx.search(probe)
+                    and not (name == "the digest" and _IMAGE_DIGEST.search(chunk))), None)
         if not hit:
             continue
         replaces = "\n".join(src_lines[a - 1:b])

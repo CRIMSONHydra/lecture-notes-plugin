@@ -141,7 +141,9 @@ def apply_scrub(text: str, edit: dict) -> tuple[str, str]:
             m = _flex(old).search(t)
             span = m.span() if m else None
     if span is None:
-        if len(new) >= 12 and _flex(new).search(t):      # the rewrite is already there
+        # the rewrite is already there (a short one like "Output:" too, as a whole phrase); check mode scans the
+        # note for any process talk left, so a wrong ``replaces`` cannot hide behind this
+        if new and re.search(r"(?<![\w*])" + _flex(new).pattern + r"(?![\w*])", t):
             return text, "already-clean"
         return text, "replaces-not-found"
     a, b = span

@@ -82,9 +82,20 @@ note_item = next(it for it in found if it["text"].startswith("> **Note:**"))
 out2, st3 = sc.apply_scrub(NOTE, {"replaces": note_item["replaces"], "text": ""})
 if st3 != "scrubbed" or "\n\n\n" in out2 or "Nothing in this note" in out2:
     bad.append(("scrub delete keeps one blank line", st3))
-out3, st4 = sc.apply_scrub(NOTE, {"replaces": "a passage that is not there", "text": "x"})
+out3, st4 = sc.apply_scrub(NOTE, {"replaces": "a passage that is not there", "text": "Nowhere in this note."})
 if st4 != "replaces-not-found" or out3 != NOTE:
     bad.append(("scrub not found", st4))
+# a short rewrite ("Output:") is recognised on a re-run, not reported as not found
+short = {"replaces": "The numbers are this laptop's, not the class server's.", "text": "Output:"}
+once, s1 = sc.apply_scrub(NOTE, short)
+twice, s2 = sc.apply_scrub(once, short)
+if s1 != "scrubbed" or s2 != "already-clean" or twice != once:
+    bad.append(("short rewrite idempotent", s1, s2))
+# "the digest" of a container image is subject matter; the lecture digest is not
+docker = "## Tags\n\nPin by digest (`nginx@sha256:892b`): no security fixes until you update the digest.\n"
+lecture = "## Tags\n\nThe digest also lists this command, so it is shown here.\n"
+if pt.scan(docker) or not pt.scan(lecture):
+    bad.append(("image digest vs lecture digest", pt.scan(docker), pt.scan(lecture)))
 # a wrapped passage still matches when the line breaks moved (whitespace-tolerant)
 wrapped = NOTE.replace("The numbers are this laptop's, not the class server's.",
                        "The numbers are this laptop's,\nnot the class server's.")

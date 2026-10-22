@@ -133,7 +133,9 @@ snippets you touch. Update `Verified as of` and the sidecars. Then run the same 
    as "representative" or "not run", and is built from the transcript, screen
    notes, instructor code and official docs. Run each allowed snippet once to capture its output. No
    exploratory runs, no environment probing (`docker version`, `git config --system`, `--help` pages), no
-   extra demos the class did not do. Compile and run in
+   extra demos the class did not do. A snippet that hides a temp path from its output must not assume the
+   path has no spaces (the sandbox is under the project; anchor the `sed` on what precedes the path, not on
+   `[^[:space:]]*`). Compile and run in
    `<build_dir>/snippets/<stem>/` with the profile's `snippets.<lang>.compile` and `.run` templates
    (placeholders `{src}`, `{exe}`, `{dir}`). Output that is platform-dependent, or that exists only as a
    frame, is `{run nocheck}` with a caption naming the platform ("as shown in class, macOS"). A snippet

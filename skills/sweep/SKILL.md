@@ -78,10 +78,17 @@ analyst back once. With `--dry-run` stop here. Interactive
 and no `--yes`: `AskUserQuestion` once ("Apply N edits across M notes?", Apply / Cancel). Headless or `--yes`:
 apply. Cancel: stop; nothing has been written to a note.
 
-## Step 5. Editors (one per note, in parallel)
+## Step 5. Apply, then editors only where needed
 
-Group the plan edits by note. Send one `notes:sweep-editor` per note, **up to 8 per message**, foreground, as
-many messages as needed:
+Apply each tier's plan deterministically first (the two tiers may run in parallel):
+`uv run "${CLAUDE_PLUGIN_ROOT}/scripts/sweep_check.py" --project "<P>" --tier <tier> --plan "<plan_out>" --apply --json "<P>/.notes-plugin-internal/work/reports/sweep-apply-<tier>.json"`
+It places every insertion inside its sweep markers, resolves pending references and applies scrubs, and it is
+idempotent (a re-run reports `replaced` / `already-clean`). Read the JSON: every edit whose status is
+`anchor-not-found` or `replaces-not-found` is left for an editor. One editor agent per note had skipped a whole edit
+type in practice, so editors are the fallback for edits the script cannot place, not the first pass.
+
+Group the edits left over by note. Send one `notes:sweep-editor` per such note, **up to 8 per message**,
+foreground, as many messages as needed, and name the failing edit ids and their status in the card:
 
 ```text
 TASK CARD
@@ -91,6 +98,7 @@ tier: basic
 note: <P>/notes/basic/03-stack-and-heap.md
 edits: <P>/.notes-plugin-internal/work/course/sweep-plan-basic.json
 only_note: 03-stack-and-heap.md
+only_edits: [scrub-03-004 (replaces-not-found), builds-on-03-02-pointers (anchor-not-found)]
 protect: [<P>/resources]
 ```
 
