@@ -649,12 +649,49 @@ def strip_inline_markers(text: str) -> str:
     return "\n".join(out)
 
 
+_DETAILS_OPEN_RE = re.compile(r"^(\s*)(<details>\s*(?:<summary>.*?</summary>)?)(.*)$")
+
+
+def open_details_blocks(text: str) -> str:
+    """Give a ``<details>`` that starts its own line blank lines inside, so its answer is rendered as markdown.
+
+    A line that starts with ``<details>`` opens a CommonMark HTML block, which runs to the next blank line with
+    no markdown parsed: ``**Answer.**`` came out with its asterisks. Splitting the opening and closing tags onto
+    their own lines, with blank lines between, makes the answer an ordinary paragraph inside the block. A
+    ``<details>`` in the middle of a line (after the question text) is inline HTML and already fine.
+    """
+    out: list[str] = []
+    fenced, ind = False, None
+    for ln in text.split("\n"):
+        if re.match(r"^\s{0,3}(`{3,}|~{3,})", ln):
+            fenced = not fenced
+        if fenced:
+            out.append(ln)
+            continue
+        m = _DETAILS_OPEN_RE.match(ln) if ind is None else None
+        if m:
+            ind = m.group(1)
+            out += [ind + m.group(2), ""]
+            ln = ind + m.group(3).strip()
+            if not m.group(3).strip():
+                continue
+        if ind is not None and ln.rstrip().endswith("</details>"):
+            body = ln.rstrip()[:-len("</details>")]
+            if body.strip():
+                out += [body.rstrip(), ""]
+            out.append(ind + "</details>")
+            ind = None
+            continue
+        out.append(ln)
+    return "\n".join(out)
+
+
 def render_chapter(ch: Chapter, md: MarkdownIt, ctx: dict, tier: str,
                    counterpart: tuple[str, str] | None = None) -> tuple[str, dict]:
     """(section html, info). ``info``: math, mermaid, figures[], unmapped[]."""
     env = {"math": 0, "mermaid": 0, "figures": [], "unmapped": set(),
            "link": dict(ctx, chapter=ch), "math_on": bool(ctx.get("math"))}
-    h = md.render(strip_inline_markers(ch.md), env)
+    h = md.render(open_details_blocks(strip_inline_markers(ch.md)), env)
     h = mark_secno(fix_tables(h))
     h = replace_glyphs(h, env["unmapped"])
     h = h.replace("<details>", "<details open>")
