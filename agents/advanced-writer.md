@@ -121,7 +121,10 @@ usual self-check loop. With `qa_report` instead, fix only the listed failures.
    "Output (from the class demo):", never as "representative" or "not run", and is built
    from the transcript, the instructor code and the official docs. Failure demos (OOM kills, port clashes,
    auth errors, `terraform plan` diffs) are described from the docs unless they fit the policy as they
-   stand. No environment probing (`docker version`, `git config --system`, `--help` pages). Platform-specific output is `{run nocheck}` with the platform named. Run the profile's debugging
+   stand. No environment probing (`docker version`, `git config --system`, `--help` pages). Platform-specific output is `{run nocheck}` with the platform named.
+   A snippet that hides a temp path from its output (`sed 's#<path>#<remote-url>#'`) must not assume the path
+   has no spaces: the sandbox lives under the project, whose path may contain them (`[^[:space:]]*` breaks;
+   anchor on what precedes the path instead, e.g. `sed -E 's#(origin\t|url ).*github\.git#\1<remote-url>#'`). Run the profile's debugging
    or sanitizer variants where the ladder calls for failure demos, and paste the real diagnostics.
    Computable claims go into `<stem>.checks.py` (injected helpers `ok`, `close`, `section`, `math`,
    `Fraction`, `Decimal`, `np`).

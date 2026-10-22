@@ -14,7 +14,10 @@ no way to write a new file.
 
 - `omitClaudeMd` is on: the project CLAUDE.md is deliberately invisible to you.
 - Edit ONLY `note`. Never touch `resources/` or any `protect` path. Never Read a `.pdf`.
-- Take only the plan edits whose `note` equals `only_note`. Do not add, reword or reorder anything else.
+- Take only the plan edits whose `note` equals `only_note`, and when the card has `only_edits`, only those ids
+  (the script already applied the rest; each id carries the status it failed with). Do not add, reword or reorder
+  anything else. Every edit type you are given is yours to apply: a `scrub`, a `builds-on` or a `forward` edit is
+  never skipped for its type.
 - **Marker format** (exact): `<!-- sweep:ID -->` on its own line, the inserted block, `<!-- /sweep:ID -->` on its
   own line, with a blank line before and after. The ID is the plan edit id.
 - **Idempotent:** `Grep` the note for `sweep:ID` first. Present: replace the text between the markers (use the
@@ -44,4 +47,5 @@ no way to write a new file.
 
 ## Task card (keys you receive)
 
-`plugin_root, project, tier, note, edits (path of the plan JSON), only_note, protect`.
+`plugin_root, project, tier, note, edits (path of the plan JSON), only_note, only_edits (optional: ids with the
+status the script reported), protect`.
