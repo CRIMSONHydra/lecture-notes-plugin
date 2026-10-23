@@ -726,12 +726,14 @@ def build_cover(profile: dict, tier: str, chapters: list[Chapter]) -> str:
         sub = "Deep-dive notes"
         blurb = ("From first principles to production reality: worked examples, generated figures "
                  "and cited sources.")
+    cover = profile.get("cover") or {}                # optional profile override of the cover text
+    sub, blurb = cover.get("subtitle") or sub, cover.get("blurb") or blurb
     inst = profile.get("institution") or ""
     meta = esc(inst) + ("<br>" if inst else "") + esc(blurb)
     return (
         '<section class="cover"><div class="cv-rule"></div>'
         f'<div class="cv-kicker">{esc(profile.get("short") or profile["title"])}</div>'
-        f'<div class="cv-tier">{esc(TIER_KICKER[tier])}</div>'
+        f'<div class="cv-tier">{esc(cover.get("label") or TIER_KICKER[tier])}</div>'
         f'<h1 class="cv-title">{esc(profile["title"])}</h1>'
         f'<div class="cv-sub">{esc(sub)}</div>'
         f'<div class="cv-meta">{meta}</div>'

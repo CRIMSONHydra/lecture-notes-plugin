@@ -242,6 +242,7 @@ class Builder:
                 self.warn(f"{ch.path.name}: emoji {u} has no vector stand-in (may embed a Type 3 font)")
             expected += self.check_figures_quiet(ch, info["figures"])
         sub = "Class revision notes" if self.tier == "basic" else "Deep-dive notes"
+        sub = (self.profile.get("cover") or {}).get("subtitle") or sub
         title = f"{self.profile['title']} — {sub}"
         html = self.document(title, "".join(parts), math, mermaid)
         hp = self.build / f"{self.prefix}-Compendium-{self.tier}.html"

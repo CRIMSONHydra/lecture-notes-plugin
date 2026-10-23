@@ -46,6 +46,7 @@ Everything else is optional and takes the defaults in
 | `id`, `aliases` | string, list | machine name, and alternative names accepted on the command line |
 | `title`, `short`, `prefix` | string | full course title; running-header tag; PDF filename prefix |
 | `institution` | string | one line for the cover and agents |
+| `cover` | map, optional | override the compendium cover text: `label` (the tier chip), `subtitle`, `blurb`; for a one-off document such as a code companion |
 | `spelling` | `en-GB`, `en-US`, `any` | lint hint only |
 | `resources_dir` | path | where the user drops inputs, **read-only**. Omit it: the default is `"resources"` inside the project. An absolute path is allowed for an external tree |
 | `paths.*` | pattern or list | where inputs live, relative to `resources_dir` (below) |
